@@ -53,10 +53,11 @@ public:
 	void setNumCustomers(int newSize);
 	int getNumCustomers();
 
-	BankManagementSystem_Model::st_customer selectCustomer_m(string retJSON);	//2
+	//BankManagementSystem_Model::st_customer selectCustomer_m(string retJSON);	//2
 	void modName(BankManagementSystem_Model::st_customer customer, string newNm);
 	void modPIN(BankManagementSystem_Model::st_customer customer, int newPIN);
-	BankManagementSystem_Model::st_account* getCurrCustomerAccounts(int custID);
+	BankManagementSystem_Model::st_account createAccount(double accAmt);
+
 
 	BankManagementSystem_Model::st_customer removeCustomer_m(int selID);	//3
 

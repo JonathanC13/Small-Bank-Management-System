@@ -131,13 +131,6 @@ int BankManagementSystem_Model::getNumCustomers()
 
 // <op 2 Select customer>
 
-BankManagementSystem_Model::st_customer BankManagementSystem_Model::selectCustomer_m(string retJSON)
-{
-	// parse the json into a st_customer. If not found default ID is -1, to indicate not found
-
-	// return the st_customer
-
-}
 
 void BankManagementSystem_Model::modName(BankManagementSystem_Model::st_customer customer, string newNm)
 {
@@ -155,9 +148,19 @@ void BankManagementSystem_Model::modPIN(BankManagementSystem_Model::st_customer 
 	}
 }
 
-BankManagementSystem_Model::st_account* BankManagementSystem_Model::getCurrCustomerAccounts(int custID)
-{
+BankManagementSystem_Model::st_account BankManagementSystem_Model::createAccount(double accAmt){
+	//<Get the current time>
+	// current date/time based on current system
+	time_t now = time(0);
 
+	// convert now to string form
+	char* dt = ctime(&now);
+
+	BankManagementSystem_Model::st_account new_acc;
+	new_acc.dateCreated = dt;
+	new_acc.tot_amount = accAmt;
+
+	return new_acc;
 }
 
 // </op 2>

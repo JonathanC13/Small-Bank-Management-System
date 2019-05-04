@@ -65,10 +65,10 @@ BankManagementSystem_Controller::BankManagementSystem_Controller(BankManagementS
 				viewAllCustomers();
 				break;
 			case 2:
-				selectCustomer();
+				selectCustomer();	// in the add account option of selectCustomer // updates customer info when it can (customer's number of accounts)
 				break;
 			case 3:
-				removeCustomer();
+				removeCustomer();	// todo, removing a customer that has accounts will change the owner to value like -5 to indicate that all funds now belong to the bank
 				break;
 			case 4:
 				viewAllAccounts();
@@ -77,13 +77,14 @@ BankManagementSystem_Controller::BankManagementSystem_Controller(BankManagementS
 				editAccount();
 				break;
 			case 6:
-				removeAnAccount();
+				removeAnAccount();	// updates customer info when it can (customer's number of accounts)
 				break;
 			case 7:
-				transfer(1, 0);
+				transfer(1, 0);	// todo successful transfer increases the number of transfers of the affected customers
 				break;
 			case 8:
 				exit = 1;
+				closeProgram();
 				cout << "Thank you, exiting ...";
 				break;
 
@@ -330,12 +331,13 @@ void BankManagementSystem_Controller::selectedCustomerOptions(BankManagementSyst
 			continue;
 		}
 
-		if(selectOp < 1 || selectOp > 4)
+		if(selectOp < 1 || selectOp > 5)
 		{
+			cout << "Please enter a value 0 to 5" << endl;
 			continue;
 		}
 
-		if(selectOp == 4)
+		if(selectOp == 5)
 		{
 			break;
 		}
@@ -347,15 +349,19 @@ void BankManagementSystem_Controller::selectedCustomerOptions(BankManagementSyst
 				sel_cust = updateCustomerInfoOptions(sel_cust);
 				break;
 			case 2:
+				// 2. create an account for this customer
+				createAccount(sel_cust);
+				break;
+			case 3:
 				currentCustomerAccounts(sel_cust.ID);
 				// view all accounts
 				break;
-			case 3:
+			case 4:
 				// perform internal transfer
 				transfer(0, sel_cust.ID);
 				break;
 			default:
-				cout << "Please enter a value 0 to 4" << endl;
+				cout << "Please enter a value 0 to 5" << endl;
 				break;
 		}
 	}
@@ -391,6 +397,7 @@ BankManagementSystem_Model::st_customer BankManagementSystem_Controller::updateC
 
 		if(selectOp < 1 || selectOp > 3)
 		{
+			cout << "Please enter a value 1 to 3" << endl;
 			continue;
 		}
 
@@ -464,6 +471,61 @@ BankManagementSystem_Model::st_customer BankManagementSystem_Controller::updateC
 	return sel_custcurr;
 }
 
+void BankManagementSystem_Controller::createAccount(BankManagementSystem_Model::st_customer sel_cust)
+{
+	double accAmt = 0;
+	while(1){
+		view.printAccAmt();
+		cin >> accAmt;
+		if (cin.fail())
+		{
+			cout << "ERROR --  Account amount" << endl;
+
+			// get rid of failure state
+			cin.clear();
+
+			// From Eric's answer (thanks Eric)
+			// discard 'bad' character(s)
+			cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+			continue;
+		}
+		if(accAmt == -1 ){
+			return;
+		}
+		if(accAmt < 0){
+			cout << "Please enter a positive value for amount." << endl;
+			continue;
+		} else {
+			break;
+		}
+	}
+
+
+	BankManagementSystem_Model::st_customer sel_custcurr;
+	sel_custcurr.ID = sel_cust.ID;
+	BankManagementSystem_Model::st_account new_acc = model.createAccount(accAmt);
+
+	string retJSON = UDP_contr.createUDPPacket(10, sel_custcurr, new_acc, 0, 0, 0);
+
+	// parse json
+	std::vector<BankManagementSystem_Model::st_account> viewingAcc = model.getAllAccounts(retJSON);
+
+	//cout << "NUM ACC RET = " << viewingAcc.size() << endl;
+	if(viewingAcc.size() == 1){
+		// change customer account count
+		BankManagementSystem_Model::st_customer update_custcurr = sel_cust;
+		update_custcurr.num_acc = update_custcurr.num_acc + 1;
+		sel_cust.num_acc = sel_cust.num_acc + 1;
+
+		// update
+		string retJSON = UDP_contr.createUDPPacket(4, update_custcurr, new_acc, 0, 0, 0);
+	} // else no account so dont update a customer or somehow too many accounts affected and returned
+
+	// view
+	// 1. pass the array to view and it prints
+	view.printAllAccounts(viewingAcc);
+}
+
 void BankManagementSystem_Controller::currentCustomerAccounts(int custID)
 {
 
@@ -526,6 +588,9 @@ void BankManagementSystem_Controller::removeCustomer()
 					if(retJSON.compare(0,1,"1") == 0)
 					{
 						cout << "Customer deleted!" << endl;
+
+						// todo, get all accounts that belong to this deleted customer and change the owner value to -5
+
 						break;
 
 					} else {
@@ -742,7 +807,7 @@ void BankManagementSystem_Controller::removeAnAccount()
 {
 	view.printRemoveAcc();
 
-	// user input customer ID
+	// user input account ID
 	int selectID = selectID_IN();
 	if(selectID == -1){
 		return;
@@ -756,6 +821,8 @@ void BankManagementSystem_Controller::removeAnAccount()
 	std::vector<BankManagementSystem_Model::st_account> viewingAcc = model.getAllAccounts(retJSON);
 	BankManagementSystem_Model::st_account sel_acccurr = viewingAcc[0];
 	view.printAccountsInfo(sel_acccurr); // display the selected account to be deleted
+
+	int acc_owner = sel_acccurr.ownerID;	// get owner of th account
 
 	if(sel_acccurr.accountID != -1){
 		// confirmation msg
@@ -784,6 +851,33 @@ void BankManagementSystem_Controller::removeAnAccount()
 					if(retJSON.compare(0,1,"1") == 0)
 					{
 						cout << "Account deleted!" << endl;
+
+						BankManagementSystem_Model::st_customer modCust;
+						modCust.ID = acc_owner;
+						string retJSON_custUpdate = UDP_contr.createUDPPacket(3, modCust, placeholder_acc, 0, 0, 0);
+
+						// parse the JSON
+						std::vector<BankManagementSystem_Model::st_customer> viewingCustomers = model.getAllCustomers(retJSON_custUpdate);
+						modCust = viewingCustomers[0];
+
+						// check if found
+						if(modCust.ID != -1)
+						{
+							// if ID not -1, then it was found in the DB and returned
+							int new_num_acc = 0;
+							if (modCust.num_acc > 0){
+								new_num_acc = modCust.num_acc - 1;
+							}
+							modCust.num_acc = new_num_acc;
+							// update customer
+							string retJSON_final = UDP_contr.createUDPPacket(3, modCust, placeholder_acc, 0, 0, 0);
+
+
+						} else {
+							// if owner does not exist
+							cout << "Account owner does not exist, therefore no customer updated." << endl;
+						}
+
 						break;
 
 					} else {
@@ -808,6 +902,7 @@ void BankManagementSystem_Controller::removeAnAccount()
 
 // <op 7 Global account transfer>
 // type: local = 0, global = 1
+// todo, update num of transfers when successful transfer is completed
 void BankManagementSystem_Controller::transfer(int type, int custID)
 {
 	BankManagementSystem_Model::st_customer custTrans;

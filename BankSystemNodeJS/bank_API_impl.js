@@ -2,8 +2,10 @@ const mysql = require('C:\\Users\\Jonathan\\Desktop\\NodeJs Tutorial\\node_modul
 
 'use strict';
 
+// Database table columns
 const cust_columns = ["id_cust", "nm_cust", "pin_cust", "datecreated_cust", "num_accounts_cust", "num_trans_cust"];
 const acc_columns = ["id_owner", "id_account", "datecreated_acc", "amount_acc"];
+
 // create a connection to the database
 // <Create connection>
 function connectDBSQL(dbName){
@@ -17,9 +19,11 @@ function connectDBSQL(dbName){
 }
 // </Create connection>
 
+// <Close connection>
 function closeSQL(con){
   con.end();
 }
+// </Close connection>
 
 exports.createCustomer = function(name, pin, date, num_acc, num_trans, callback){
   const con = connectDBSQL();
@@ -142,34 +146,6 @@ exports.getCustomers = function(id, callback){
   });
 }
 
-// to be remove
-/*
-exports.selectCustomer = function(id, callback){
-  const con = connectDBSQL();
-
-  con.connect(function(err) {
-    if (err){
-      console.log("Error: selectCustomer, could not connect to database.");
-      throw err;
-    }
-    console.log("log: selectCustomer: connected to DB.");
-    let sql_sel = "SELECT * FROM customers WHERE ?? = ?"
-    const params = [cust_columns[0], id];
-
-    con.query(sql_sel, params, function (err, result, fields) {
-      if (err){
-        console.log("Error: selectCustomer select query.");
-        throw err;
-      }
-      return callback(result);
-      //console.log(result);
-    });
-    console.log("log: selectCustomer: Complete.");
-    closeSQL(con);
-  });
-}
-*/
-// "id_cust", "nm_cust", "pin_cust", "datecreated_cust", "num_accounts_cust", "num_trans_cust"
 // "id_cust", "nm_cust", "pin_cust", "datecreated_cust", "num_accounts_cust", "num_trans_cust"
 exports.updateCustomer = function(id, name, pin, num_acc, num_trans, callback){
   const con = connectDBSQL();
@@ -192,8 +168,9 @@ exports.updateCustomer = function(id, name, pin, num_acc, num_trans, callback){
     params.push(cust_columns[1], name_s, cust_columns[2], pin, cust_columns[4], num_acc, cust_columns[5], num_trans, cust_columns[0], id_int);
     let sql_whole = mysql.format(sql_q, params);
     console.log("params: " + sql_whole);
-    con.query(sql_q, params, function (err, result, fields) {
+    var q = con.query(sql_q, params, function (err, result, fields) {
       if (err){
+        console.log(q.sql);
         console.log("Error: updateCustomer query.");
         throw err;
       }
@@ -363,12 +340,66 @@ exports.removeAccount = function(id, callback){
   });
 }
 
-//<transfers>
-// in c++
-//  if local, it gets both accounts exist and checks if same ownerID, if yes send the transfer request
-//  if global, just check if both accounts exist
-exports.amountTransfer = function(toAcc, fromAcc, ammount, callback){
-  //todo
-  // with the source acc ID and dest acc ID get the rows.
+exports.createAccount = function(owner_id, datecr_acc, accountAmt, callback){
+  const con = connectDBSQL();
+
+  con.connect(function(err) {
+    if (err){
+      console.log("Error: createAccount, could not connect to database.");
+      throw err;
+    }
+    console.log("log: createAccount: connected to DB.");
+    //
+    // to determine a unique account ID, get the highest current ID first
+    con.query("SELECT id_account FROM accounts", function (err, rows, result, fields) {
+      if (err){
+        console.log("Error: createAccount select account ID query");
+        throw err;
+      }
+      let max = 0;
+      rows.forEach(function(row) {
+        console.log(row.id_account);
+        if(row.id_account > max){
+          max = row.id_account;
+        }
+      });
+
+      let assignedID = max + 1;
+      console.log("assigned ID: " + assignedID);
+
+
+      let sql_ins = "INSERT INTO accounts (??,??,??,??) VALUES (?,?,?,?)";
+      const vals = [owner_id, assignedID, datecr_acc, accountAmt];
+      const params = [];
+      //["id_owner", "id_account", "datecreated_acc", "amount_acc"];
+      params.push(... acc_columns, ... vals);
+
+      var q = con.query(sql_ins, params, function (err, result, fields) {
+        if (err){
+          console.log(q.sql);
+          console.log("Error: createAccount insert query");
+          throw err;
+        }
+
+        exports.getAllAccounts(assignedID, function(result){
+
+          // handle falsey values
+          result[0].id_owner = result[0].id_owner || 0;
+          result[0].id_account = result[0].id_account || 0;
+          if(result[0].datecreated_cust == 0){
+            result[0].datecreated_cust = "0";
+          }
+          result[0].amount_acc = result[0].amount_acc || 0;
+
+          //let jsonStr = JSON.stringify(result);
+          //console.log("JJJJ " + jsonStr);
+          return callback(result);
+        });
+
+      });
+
+      console.log("log: createAccount: Complete.");
+      closeSQL(con);
+    });
+  });
 }
-//</transfers>

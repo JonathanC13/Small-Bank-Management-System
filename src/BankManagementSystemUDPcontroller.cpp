@@ -179,7 +179,7 @@ string BankManagementSystemUDP_controller::send_rec_Msg(string msgToSend)
 	int sockfd;
 	char rec_Buffer[MAXLINE];
 	//std::string s = b_Packet;
-	const char *hello = msgToSend.c_str();
+	const char *hello = msgToSend.c_str();	// 1 byte each index
 
 	cout << "Sending... " << hello <<endl;
 
@@ -265,6 +265,7 @@ string BankManagementSystemUDP_controller::send_rec_Msg(string msgToSend)
  *	07 = select account based on owner
  *	08 = update account
  *	09 = remove an account (deleting a row)
+ *	10 = add an account
  *	// 20 = account amount transfer (need account IDs (to/from) and valid amount.)
  *	50 = client closing, tell server it can as well.
  *
@@ -398,12 +399,12 @@ void BankManagementSystemUDP_controller::createUDPHeader(char* b_header, int req
 
 void BankManagementSystemUDP_controller::createUDPBody(char* b_body, BankManagementSystem_Model::st_customer cust_st, BankManagementSystem_Model::st_account acc_st, int acct_ID_SRC, int acct_ID_DEST, int transfer_amt)
 {
-	// customer section
+	// <customer section>
 	string name = cust_st.Name + "/";
 	char const *pchar_name = name.c_str();
 
 	//strncpy(b_body, pchar_name, NAME_SIZE); null terminating because destination is large enough
-	for(int i = 0; i < strlen(pchar_name); i ++)
+	for(unsigned int i = 0; i < strlen(pchar_name); i ++)
 	{
 		b_body[i] = pchar_name[i];
 	}
@@ -413,7 +414,7 @@ void BankManagementSystemUDP_controller::createUDPBody(char* b_body, BankManagem
 
 	//cout << "ID HERE: " << id << endl;
 
-	for(int i = 0; i < strlen(pchar_id); i ++)
+	for(unsigned int i = 0; i < strlen(pchar_id); i ++)
 	{
 		b_body[i+NAME_SIZE] = pchar_id[i];
 	}
@@ -422,7 +423,7 @@ void BankManagementSystemUDP_controller::createUDPBody(char* b_body, BankManagem
 	char const *pchar_pin = pin.c_str();
 
 	//strncpy(b_body + NAME_SIZE, pchar_pin, PIN_SIZE);
-	for(int i = 0; i < strlen(pchar_pin); i ++)
+	for(unsigned int i = 0; i < strlen(pchar_pin); i ++)
 	{
 		b_body[i+NAME_SIZE+ID_SIZE] = pchar_pin[i];
 	}
@@ -431,16 +432,36 @@ void BankManagementSystemUDP_controller::createUDPBody(char* b_body, BankManagem
 	char const *pchar_date = date.c_str();
 
 	//strncpy(b_body + NAME_SIZE + PIN_SIZE, pchar_date, DATE_SIZE);
-	for(int i = 0; i < strlen(pchar_date); i ++)
+	for(unsigned int i = 0; i < strlen(pchar_date); i ++)
 	{
 		b_body[i+NAME_SIZE + ID_SIZE + PIN_SIZE] = pchar_date[i];
 	}
+
+	string numOfAcc = to_string(cust_st.num_acc) + "/";
+	char const *pchar_AccNum = numOfAcc.c_str();
+
+	//strncpy(b_body + NAME_SIZE, pchar_pin, PIN_SIZE);
+	for(unsigned int i = 0; i < strlen(pchar_AccNum); i ++)
+	{
+		b_body[i+NAME_SIZE+ID_SIZE+ PIN_SIZE + DATE_SIZE] = pchar_AccNum[i];
+	}
+
+	string numOfTrans = to_string(cust_st.num_trans) + "/";
+	char const *pchar_TransNum = numOfTrans.c_str();
+
+	//strncpy(b_body + NAME_SIZE, pchar_pin, PIN_SIZE);
+	for(unsigned int i = 0; i < strlen(pchar_TransNum); i ++)
+	{
+		b_body[i+NAME_SIZE+ID_SIZE+ PIN_SIZE + DATE_SIZE+ NUM_ACC_SIZE] = pchar_TransNum[i];
+	}
+
+	// </customer section>
 
 	// account section
 	string acct_owner = to_string(acc_st.ownerID) + "/";
 	char const *pchar_acctOwner = acct_owner.c_str();
 
-	for(int i = 0; i < strlen(pchar_acctOwner); i ++)
+	for(unsigned int i = 0; i < strlen(pchar_acctOwner); i ++)
 	{
 		b_body[i+NAME_SIZE + ID_SIZE + PIN_SIZE + DATE_SIZE + NUM_ACC_SIZE + NUM_TRANS_SIZE] = pchar_acctOwner[i];
 	}
@@ -448,7 +469,7 @@ void BankManagementSystemUDP_controller::createUDPBody(char* b_body, BankManagem
 	string acct_ID = to_string(acc_st.accountID) + "/";
 	char const *pchar_acctID = acct_ID.c_str();
 
-	for(int i = 0; i < strlen(pchar_acctID); i ++)
+	for(unsigned int i = 0; i < strlen(pchar_acctID); i ++)
 	{
 		b_body[i+NAME_SIZE + ID_SIZE + PIN_SIZE + DATE_SIZE + NUM_ACC_SIZE + NUM_TRANS_SIZE + OWNER_SIZE] = pchar_acctID[i];
 	}
@@ -457,7 +478,7 @@ void BankManagementSystemUDP_controller::createUDPBody(char* b_body, BankManagem
 	char const *pchar_date_acc = acc_date.c_str();
 
 	//strncpy(b_body + NAME_SIZE + PIN_SIZE, pchar_date, DATE_SIZE);
-	for(int i = 0; i < strlen(pchar_date_acc); i ++)
+	for(unsigned int i = 0; i < strlen(pchar_date_acc); i ++)
 	{
 		b_body[i+NAME_SIZE + ID_SIZE + PIN_SIZE + DATE_SIZE + NUM_ACC_SIZE + NUM_TRANS_SIZE + OWNER_SIZE + ACC_ID_SIZE] = pchar_date_acc[i];
 	}
@@ -466,7 +487,7 @@ void BankManagementSystemUDP_controller::createUDPBody(char* b_body, BankManagem
 	char const *pchar_amt_acc = acc_amt.c_str();
 
 	//strncpy(b_body + NAME_SIZE + PIN_SIZE, pchar_date, DATE_SIZE);
-	for(int i = 0; i < strlen(pchar_amt_acc); i ++)
+	for(unsigned int i = 0; i < strlen(pchar_amt_acc); i ++)
 	{
 		b_body[i+NAME_SIZE + ID_SIZE + PIN_SIZE + DATE_SIZE + NUM_ACC_SIZE + NUM_TRANS_SIZE + OWNER_SIZE + ACC_ID_SIZE + DATE_SIZE] = pchar_amt_acc[i];
 	}
@@ -475,7 +496,7 @@ void BankManagementSystemUDP_controller::createUDPBody(char* b_body, BankManagem
 	string acct_src = to_string(acct_ID_SRC) + "/";
 	char const *pchar_acctSRC = acct_src.c_str();
 
-	for(int i = 0; i < strlen(pchar_acctSRC); i ++)
+	for(unsigned int i = 0; i < strlen(pchar_acctSRC); i ++)
 	{
 		b_body[i+NAME_SIZE + ID_SIZE + PIN_SIZE + DATE_SIZE + NUM_ACC_SIZE + NUM_TRANS_SIZE + OWNER_SIZE + ACC_ID_SIZE + DATE_SIZE + TOT_AMT_SIZE] = pchar_acctSRC[i];
 	}
@@ -483,7 +504,7 @@ void BankManagementSystemUDP_controller::createUDPBody(char* b_body, BankManagem
 	string acct_dest = to_string(acct_ID_DEST) + "/";
 	char const *pchar_acctDEST = acct_dest.c_str();
 
-	for(int i = 0; i < strlen(pchar_acctDEST); i ++)
+	for(unsigned int i = 0; i < strlen(pchar_acctDEST); i ++)
 	{
 		b_body[i+NAME_SIZE + ID_SIZE + PIN_SIZE + DATE_SIZE + NUM_ACC_SIZE + NUM_TRANS_SIZE + OWNER_SIZE + ACC_ID_SIZE + DATE_SIZE + TOT_AMT_SIZE + TRANS_ACC_DEST_ID_SIZE] = pchar_acctDEST[i];
 	}
@@ -491,7 +512,7 @@ void BankManagementSystemUDP_controller::createUDPBody(char* b_body, BankManagem
 	string tras_amt = to_string(transfer_amt) + "/";
 	char const *pchar_acctTrans = tras_amt.c_str();
 
-	for(int i = 0; i < strlen(pchar_acctTrans); i ++)
+	for(unsigned int i = 0; i < strlen(pchar_acctTrans); i ++)
 	{
 		b_body[i+NAME_SIZE + ID_SIZE + PIN_SIZE + DATE_SIZE + NUM_ACC_SIZE + NUM_TRANS_SIZE + OWNER_SIZE + ACC_ID_SIZE + DATE_SIZE + TOT_AMT_SIZE + TRANS_ACC_DEST_ID_SIZE + TRANS_ACC_DEST_ID_SIZE] = pchar_acctTrans[i];
 	}

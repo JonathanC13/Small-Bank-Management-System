@@ -51,6 +51,7 @@ public:
 	void printModNameOption();												//			2.1.1.1 mod name msg
 	void printModPINOption();												//			2.1.1.2 mod PIN msg
 										// use printAllAccounts(...)			//		2.1.2: owner ID, Account ID, date created, total amount. transaction history later
+	void printAccAmt();															// 2.2 message for account amount
 	void printInterTransfers();												//		2.1.3: Instructions for internal transfers for customer accounts.
 	void printInterTransfersFROM();
 	void printInterTransfersTO();

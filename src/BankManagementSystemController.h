@@ -28,6 +28,7 @@ public:
 	void selectCustomer();		//2
 	int selectID_IN();
 	void selectedCustomerOptions(BankManagementSystem_Model::st_customer sel_cust);
+	void createAccount(BankManagementSystem_Model::st_customer sel_cust);
 	BankManagementSystem_Model::st_customer updateCustomerInfoOptions(BankManagementSystem_Model::st_customer sel_cust);
 	void currentCustomerAccounts(int custID);
 

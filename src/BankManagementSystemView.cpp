@@ -119,9 +119,10 @@ void BankManagementSystem_View::printCustomerInfo(BankManagementSystem_Model::st
 void BankManagementSystem_View::printSelectedCustOptions()
 {
 	cout << "1. Update customer info" << endl;
-	cout << "2. View all customer's accounts" << endl;
-	cout << "3. Perform internal transfer" << endl;
-	cout << "4. Exit" << endl;
+	cout << "2. Add an account." << endl;
+	cout << "3. View all customer's accounts" << endl;
+	cout << "4. Perform internal transfer" << endl;
+	cout << "5. Exit" << endl;
 
 	cout << "> Enter your choice: ";
 }
@@ -146,6 +147,9 @@ void BankManagementSystem_View::printModPINOption()
 	cout << "> Enter desired new PIN (-1 to exit): ";
 }
 
+void BankManagementSystem_View::printAccAmt(){
+	cout << "> Enter desired account amount (-1 to exit): ";
+}
 
 void BankManagementSystem_View::printInterTransfers()
 {
