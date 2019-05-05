@@ -65,10 +65,10 @@ BankManagementSystem_Controller::BankManagementSystem_Controller(BankManagementS
 				viewAllCustomers();
 				break;
 			case 2:
-				selectCustomer();	// in the add account option of selectCustomer // updates customer info when it can (customer's number of accounts)
+				selectCustomer();	// in the add account option of selectCustomer it updates customer info when it can (customer's number of accounts)
 				break;
 			case 3:
-				removeCustomer();	// todo, removing a customer that has accounts will change the owner to value like -5 to indicate that all funds now belong to the bank
+				removeCustomer();	// removing a customer that has accounts will change the owner to value like -5 to indicate that all funds now belong to the bank
 				break;
 			case 4:
 				viewAllAccounts();
@@ -80,7 +80,7 @@ BankManagementSystem_Controller::BankManagementSystem_Controller(BankManagementS
 				removeAnAccount();	// updates customer info when it can (customer's number of accounts)
 				break;
 			case 7:
-				transfer(1, 0);	// todo successful transfer increases the number of transfers of the affected customers
+				transfer(1, 0);	// successful transfer increases the number of transfers of the affected customers
 				break;
 			case 8:
 				exit = 1;
@@ -405,7 +405,7 @@ BankManagementSystem_Model::st_customer BankManagementSystem_Controller::updateC
 		{
 			// on exit commit to DB - even if no changes.
 
-			// sel_cust is given to be parsed into a packet to update the selected customer todo
+			// sel_cust is given to be parsed into a packet to update the selected customer
 			string retJSON = UDP_contr.createUDPPacket(4, sel_custcurr, placeholder_acc, 0, 0, 0);
 			//cout << "update: " << retJSON << endl;
 
@@ -589,7 +589,24 @@ void BankManagementSystem_Controller::removeCustomer()
 					{
 						cout << "Customer deleted!" << endl;
 
-						// todo, get all accounts that belong to this deleted customer and change the owner value to -5
+						//get all accounts that belong to this deleted customer and change the owner value to -5
+						BankManagementSystem_Model::st_customer emptyCust;
+						BankManagementSystem_Model::st_account placeholder_acc;
+						placeholder_acc.accountID = -2;
+						string retJSON_accnts = UDP_contr.createUDPPacket(6, emptyCust, placeholder_acc, 0, 0, 0);
+
+						std::vector<BankManagementSystem_Model::st_account> viewingAccounts = model.getAllAccounts(retJSON_accnts);
+
+						for (std::vector<BankManagementSystem_Model::st_account>::iterator iter = viewingAccounts.begin(); iter != viewingAccounts.end(); ++iter)
+						{
+							// if the selectID matches the id_owner of an account then update the owner to value "-5" to indicate funds default forfeited to the bank
+							if (selectID == iter.base()->ownerID){
+								placeholder_acc = (*iter);
+								placeholder_acc.ownerID = -5;
+
+								string retJSON_updAcc = UDP_contr.createUDPPacket(8, emptyCust, placeholder_acc, 0, 0, 0);
+							}
+						}
 
 						break;
 
@@ -902,7 +919,7 @@ void BankManagementSystem_Controller::removeAnAccount()
 
 // <op 7 Global account transfer>
 // type: local = 0, global = 1
-// todo, update num of transfers when successful transfer is completed
+// update num of transfers when successful transfer is completed
 void BankManagementSystem_Controller::transfer(int type, int custID)
 {
 	BankManagementSystem_Model::st_customer custTrans;
@@ -988,9 +1005,11 @@ void BankManagementSystem_Controller::transfer(int type, int custID)
 
 	//at this point, only update requests are required.
 	// last check to ensure local, check ownerID of both accounts are the same
-	if((SRC_acc.ownerID != DEST_acc.ownerID) && (SRC_acc.ownerID != custID)){
-		cout << "Selected accounts are not valid for an internal transfer. " << endl;
-		return;
+	if(type == 0){
+		if((SRC_acc.ownerID != DEST_acc.ownerID) && (SRC_acc.ownerID != custID)){
+			cout << "Selected accounts are not valid for an internal transfer. " << endl;
+			return;
+		}
 	}
 
 	BankManagementSystem_Model::st_customer up_cust;
@@ -1004,12 +1023,21 @@ void BankManagementSystem_Controller::transfer(int type, int custID)
 	{
 		cout << "Account updated!" << endl;
 
+		// update customer's number of transaction if they exist
+		up_cust.ID = SRC_acc.ownerID;
+		// select customer row
+		string retJSON_custSRC = UDP_contr.createUDPPacket(3, up_cust, SRC_acc, 0, 0, 0);
+		std::vector<BankManagementSystem_Model::st_customer> updCustSRC = model.getAllCustomers(retJSON_custSRC);
+		up_cust = updCustSRC[0];
+		up_cust.num_trans = up_cust.num_trans + 1;
+
+		string retJSON_updcustSRC = UDP_contr.createUDPPacket(4, up_cust, SRC_acc, 0, 0, 0);
 
 	} else {
 		cout << "ERR: account update failed." << endl;
 
 	}
-	cout << "DEST: " << DEST_acc.tot_amount << "-" << selectAmt << endl;
+	cout << "DEST: " << DEST_acc.tot_amount << "+" << selectAmt << endl;
 	DEST_acc.tot_amount = DEST_acc.tot_amount + selectAmt;
 	cout << "DEST total: " << DEST_acc.tot_amount << endl;
 	string retJSON_upDEST = UDP_contr.createUDPPacket(8, up_cust, DEST_acc, 0, 0, 0);
@@ -1017,7 +1045,15 @@ void BankManagementSystem_Controller::transfer(int type, int custID)
 	if(retJSON_upDEST.compare(0,1,"1") == 0)
 	{
 		cout << "Account updated!" << endl;
+		// update customer's number of transaction if they exist
+		up_cust.ID = DEST_acc.ownerID;
+		// select customer row
+		string retJSON_custDEST = UDP_contr.createUDPPacket(3, up_cust, DEST_acc, 0, 0, 0);
+		std::vector<BankManagementSystem_Model::st_customer> updCustDEST = model.getAllCustomers(retJSON_custDEST);
+		up_cust = updCustDEST[0];
+		up_cust.num_trans = up_cust.num_trans + 1;
 
+		string retJSON_updcustSRC = UDP_contr.createUDPPacket(4, up_cust, DEST_acc, 0, 0, 0);
 
 	} else {
 		cout << "ERR: account update failed." << endl;
@@ -1026,4 +1062,4 @@ void BankManagementSystem_Controller::transfer(int type, int custID)
 
 
 }
-// <op 7>
+// </op 7>
