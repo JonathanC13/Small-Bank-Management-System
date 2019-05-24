@@ -17,6 +17,7 @@ public:
 	BankManagementSystem_Controller(BankManagementSystem_View BMS_view, BankManagementSystem_Model BMS_model);
 	virtual ~BankManagementSystem_Controller();
 
+	void serverStatus();
 	void closeProgram();
 
 	void createCustomer_contr(); //0

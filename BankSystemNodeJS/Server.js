@@ -232,6 +232,7 @@ server.on('message', (msg, rinfo) => {
   // <Handle request commands>
   if(i_cmd == 1){
     // request command: Create customer
+
     try {
       impl_API.createCustomer(s_name, i_PIN, s_date, i_num_acc, i_num_trans, function(result){
 
@@ -239,7 +240,10 @@ server.on('message', (msg, rinfo) => {
 
         if(isEmpty(stuff_i_want)){
           // empty JSON, so create JSON with success code = 2
-          let resp_empty = '{"success":2}';
+          //let resp_empty = '{"success":2}';
+          //const message = Buffer.from(resp_empty);
+
+          let resp_empty = "02";
           const message = Buffer.from(resp_empty);
           server.send(message, rinfo.port, rinfo.address, (err) => {
             // sending to client
@@ -248,13 +252,14 @@ server.on('message', (msg, rinfo) => {
           // not empty
 
           // add success status
-          let resp_success = '{\"success\": 1}';
-          var json_resp = JSON.parse(resp_success);
-          stuff_i_want.unshift(json_resp);
+          //let resp_success = '{\"success\": 1}';
+          //var json_resp = JSON.parse(resp_success);
+          //stuff_i_want.unshift(json_resp);
           console.log(stuff_i_want);
 
           // convert JSON to string
-          let jsonStr = JSON.stringify(stuff_i_want);
+          let jsonStr = "01" + JSON.stringify(stuff_i_want);
+
           console.log("SocketLog: create customer JSON = " + jsonStr);
           // send response
           //const message = Buffer.from('Some bytes');
@@ -269,12 +274,13 @@ server.on('message', (msg, rinfo) => {
     } catch (e){
       // send error code indicating API error
       let s_e = e.toString();
-      let resp_error = '[{"success":0, "err_message":' + s_e + '}]';
+      let resp_error = "00" + s_e;
       const message = Buffer.from(resp_error);
       server.send(message, rinfo.port, rinfo.address, (err) => {
         // sending to client
       });
     }
+
   }
   else if(i_cmd == 2){
     // request command: select all customers
@@ -284,19 +290,20 @@ server.on('message', (msg, rinfo) => {
 
         if(isEmpty(stuff_i_want)){
           // empty JSON, so create JSON with success code = 2
-          let resp_empty = '{"success":2}';
+          //let resp_empty = '{"success":2}';
+          let resp_empty = "02";
           const message = Buffer.from(resp_empty);
           server.send(message, rinfo.port, rinfo.address, (err) => {
             // sending to client
           });
         } else {
-          let resp_success = '{\"success\": 1}';
-          var json_resp = JSON.parse(resp_success);
-          stuff_i_want.unshift(json_resp);
+          //let resp_success = '{\"success\": 1}';
+          //var json_resp = JSON.parse(resp_success);
+          //stuff_i_want.unshift(json_resp);
           console.log(stuff_i_want);
 
           // convert JSON to string
-          let jsonStr = JSON.stringify(stuff_i_want);
+          let jsonStr = "01" + JSON.stringify(stuff_i_want);
 
           console.log("SocketLog: view all customer JSON = " + jsonStr);
           // send response
@@ -314,7 +321,7 @@ server.on('message', (msg, rinfo) => {
     } catch (e){
       // send error code indicating API error
       let s_e = e.toString();
-      let resp_error = '[{"success":0, "err_message":' + s_e + '}]';
+      let resp_error = "00" + s_e;
       const message = Buffer.from(resp_error);
       server.send(message, rinfo.port, rinfo.address, (err) => {
         // sending to client
@@ -330,20 +337,21 @@ server.on('message', (msg, rinfo) => {
 
         if(isEmpty(stuff_i_want)){
           // empty JSON, so create JSON with success code = 2
-          let resp_empty = '[{"success":2}]';
+          //let resp_empty = '[{"success":2}]';
+          let resp_empty = "02";
           const message = Buffer.from(resp_empty);
           server.send(message, rinfo.port, rinfo.address, (err) => {
             // sending to client
           });
         } else {
 
-          let resp_success = '{\"success\": 1}';
-          var json_resp = JSON.parse(resp_success);
-          stuff_i_want.unshift(json_resp);
+          //let resp_success = '{\"success\": 1}';
+          //var json_resp = JSON.parse(resp_success);
+          //stuff_i_want.unshift(json_resp);
           console.log(stuff_i_want);
 
           // convert JSON to string
-          let jsonStr = JSON.stringify(stuff_i_want);
+          let jsonStr = "01" + JSON.stringify(stuff_i_want);
           console.log("SocketLog: view selected customer JSON = " + jsonStr);
           // send response
           //const message = Buffer.from('Some bytes');
@@ -361,7 +369,7 @@ server.on('message', (msg, rinfo) => {
     } catch(e){
       // send error code indicating API error
       let s_e = e.toString();
-      let resp_error = '[{"success":0, "err_message":' + s_e + '}]';
+      let resp_error = "00" + s_e;
       const message = Buffer.from(resp_error);
       server.send(message, rinfo.port, rinfo.address, (err) => {
         // sending to client
@@ -373,11 +381,11 @@ server.on('message', (msg, rinfo) => {
     try {
       impl_API.updateCustomer(i_ID, s_name, i_PIN, i_num_acc, i_num_trans, function(result){
         var stuff_i_want = parseInt(result, 10);  // json obj
-        let resp_success = '[{\"success\": 3}, {\"affectedRows\":' + stuff_i_want + '}]';
+        //let resp_success = '[{\"success\": 3}, {\"affectedRows\":' + stuff_i_want + '}]';
+        let jsonStr = "03" + stuff_i_want;
+        console.log(jsonStr);
 
-        console.log(resp_success);
-
-        const message = Buffer.from(resp_success);
+        const message = Buffer.from(jsonStr);
         server.send(message, rinfo.port, rinfo.address, (err) => {
           //console.log(rinfo.address);
           //console.log(rinfo.port);
@@ -389,8 +397,8 @@ server.on('message', (msg, rinfo) => {
     } catch (e){
       // send error code indicating API error
       let s_e = e.toString();
-      let resp_error = '[{"success":0, "err_message":' + s_e + '}]';
-      const message = Buffer.from(resp_error);
+      let resp_error = "00" + s_e;
+      const message = Buffer.from(jsonStr);
       server.send(message, rinfo.port, rinfo.address, (err) => {
         // sending to client
       });
@@ -400,11 +408,12 @@ server.on('message', (msg, rinfo) => {
     try {
       impl_API.removeCustomer(i_ID, function(result){
         var stuff_i_want = parseInt(result, 10);;  // int
-        let resp_success = '[{\"success\": 3}, {\"affectedRows\":' + stuff_i_want + '}]';
+        //let resp_success = '[{\"success\": 3}, {\"affectedRows\":' + stuff_i_want + '}]';
+        let jsonStr = "03" + stuff_i_want;
 
-        console.log(resp_success);
+        console.log(jsonStr);
 
-        const message = Buffer.from(resp_success);
+        const message = Buffer.from(jsonStr);
         server.send(message, rinfo.port, rinfo.address, (err) => {
           //console.log(rinfo.address);
           //console.log(rinfo.port);
@@ -416,7 +425,7 @@ server.on('message', (msg, rinfo) => {
     } catch (e){
       // send error code indicating API error
       let s_e = e.toString();
-      let resp_error = '[{"success":0, "err_message":' + s_e + '}]';
+      let resp_error = "00" + s_e;
       const message = Buffer.from(resp_error);
       server.send(message, rinfo.port, rinfo.address, (err) => {
         // sending to client
@@ -427,13 +436,13 @@ server.on('message', (msg, rinfo) => {
     try {
       impl_API.getAllAccounts(i_accID, function(result){
         var stuff_i_want = result;  // json obj
-        let resp_success = '{\"success\": 1}';
-        var json_resp = JSON.parse(resp_success);
-        stuff_i_want.unshift(json_resp);
+        //let resp_success = '{\"success\": 1}';
+        //var json_resp = JSON.parse(resp_success);
+        //stuff_i_want.unshift(json_resp);
         console.log(stuff_i_want);
 
         // convert JSON to string
-        let jsonStr = JSON.stringify(stuff_i_want);
+        let jsonStr = "01" + JSON.stringify(stuff_i_want);
         console.log("SocketLog: view all customer JSON = " + jsonStr);
         // send response
         //const message = Buffer.from('Some bytes');
@@ -450,7 +459,7 @@ server.on('message', (msg, rinfo) => {
     } catch (e) {
       // send error code indicating API error
       let s_e = e.toString();
-      let resp_error = '[{"success":0, "err_message":' + s_e + '}]';
+      let resp_error = "00" + s_e;
       const message = Buffer.from(resp_error);
       server.send(message, rinfo.port, rinfo.address, (err) => {
         // sending to client
@@ -461,13 +470,13 @@ server.on('message', (msg, rinfo) => {
     try {
       impl_API.getCustAccounts(i_ID, function(result){
         var stuff_i_want = result;  // json obj
-        let resp_success = '{\"success\": 1}';
-        var json_resp = JSON.parse(resp_success);
-        stuff_i_want.unshift(json_resp);
+        //let resp_success = '{\"success\": 1}';
+        //var json_resp = JSON.parse(resp_success);
+        //stuff_i_want.unshift(json_resp);
         console.log(stuff_i_want);
 
         // convert JSON to string
-        let jsonStr = JSON.stringify(stuff_i_want);
+        let jsonStr = "01" + JSON.stringify(stuff_i_want);
         console.log("SocketLog: view all customer JSON = " + jsonStr);
         // send response
         //const message = Buffer.from('Some bytes');
@@ -484,7 +493,7 @@ server.on('message', (msg, rinfo) => {
     } catch (e){
       // send error code indicating API error
       let s_e = e.toString();
-      let resp_error = '[{"success":0, "err_message":' + s_e + '}]';
+      let resp_error = "00" + s_e;
       const message = Buffer.from(resp_error);
       server.send(message, rinfo.port, rinfo.address, (err) => {
         // sending to client
@@ -495,11 +504,11 @@ server.on('message', (msg, rinfo) => {
     try {
       impl_API.updateAccount(i_ownerID, i_accID, i_accAMT, function(result){
         var stuff_i_want = parseInt(result, 10);;  // json obj
-        let resp_success = '[{\"success\": 3}, {\"affectedRows\":' + stuff_i_want + '}]';
+        //let resp_success = '[{\"success\": 3}, {\"affectedRows\":' + stuff_i_want + '}]';
+        let jsonStr = "03" + stuff_i_want;
+        console.log(jsonStr);
 
-        console.log(resp_success);
-
-        const message = Buffer.from(resp_success);
+        const message = Buffer.from(jsonStr);
         server.send(message, rinfo.port, rinfo.address, (err) => {
           //console.log(rinfo.address);
           //console.log(rinfo.port);
@@ -511,7 +520,7 @@ server.on('message', (msg, rinfo) => {
     } catch (e){
       // send error code indicating API error
       let s_e = e.toString();
-      let resp_error = '[{"success":0, "err_message":' + s_e + '}]';
+      let resp_error = "00" + s_e;
       const message = Buffer.from(resp_error);
       server.send(message, rinfo.port, rinfo.address, (err) => {
         // sending to client
@@ -523,11 +532,11 @@ server.on('message', (msg, rinfo) => {
     try {
       impl_API.removeAccount(i_accID, function(result){
         var stuff_i_want = parseInt(result, 10);;  // json obj
-        let resp_success = '[{\"success\": 3}, {\"affectedRows\":' + stuff_i_want + '}]';
+        //let resp_success = '[{\"success\": 3}, {\"affectedRows\":' + stuff_i_want + '}]';
+        let jsonStr = "03" + stuff_i_want;
+        console.log(jsonStr);
 
-        console.log(resp_success);
-
-        const message = Buffer.from(resp_success);
+        const message = Buffer.from(jsonStr);
         server.send(message, rinfo.port, rinfo.address, (err) => {
           //console.log(rinfo.address);
           //console.log(rinfo.port);
@@ -539,7 +548,7 @@ server.on('message', (msg, rinfo) => {
     } catch (e){
       // send error code indicating API error
       let s_e = e.toString();
-      let resp_error = '[{"success":0, "err_message":' + s_e + '}]';
+      let resp_error = "00" + s_e;
       const message = Buffer.from(resp_error);
       server.send(message, rinfo.port, rinfo.address, (err) => {
         // sending to client
@@ -550,13 +559,13 @@ server.on('message', (msg, rinfo) => {
     try {
       impl_API.createAccount(i_ID, s_accdate, i_accAMT, function(result){
         var stuff_i_want = result;  // json obj
-        let resp_success = '{\"success\": 1}';
-        var json_resp = JSON.parse(resp_success);
-        stuff_i_want.unshift(json_resp);
+        //let resp_success = '{\"success\": 1}';
+        //var json_resp = JSON.parse(resp_success);
+        //stuff_i_want.unshift(json_resp);
         console.log(stuff_i_want);
 
         // convert JSON to string
-        let jsonStr = JSON.stringify(stuff_i_want);
+        let jsonStr = "01" + JSON.stringify(stuff_i_want);
         console.log("SocketLog: create customer JSON = " + jsonStr);
         // send response
         //const message = Buffer.from('Some bytes');
@@ -568,15 +577,22 @@ server.on('message', (msg, rinfo) => {
     } catch (e){
       // send error code indicating API error
       let s_e = e.toString();
-      let resp_error = '[{"success":0, "err_message":' + s_e + '}]';
+      let resp_error = "00" + s_e;
       const message = Buffer.from(resp_error);
       server.send(message, rinfo.port, rinfo.address, (err) => {
         // sending to client
       });
     }
   }
-   else if (i_cmd == 50){
-    var close_msg = "Server closing ...";
+  else if (i_cmd == 40){
+   var close_msg = "00Server OK ...";
+   server.send(close_msg, rinfo.port, rinfo.address, (err) => {
+     //console.log(rinfo.address);
+     //console.log(rinfo.port);
+   });
+  }
+  else if (i_cmd == 50){
+    var close_msg = "00Server closing ...";
     server.send(close_msg, rinfo.port, rinfo.address, (err) => {
       //console.log(rinfo.address);
       //console.log(rinfo.port);

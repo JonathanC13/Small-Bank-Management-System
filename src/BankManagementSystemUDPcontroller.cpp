@@ -27,6 +27,7 @@ using namespace std;
 
 #define PORT     8081
 #define MAXLINE 1024000
+#define ERRBUFF 1024
 #define nodePORT	8080
 
 #define TOTAL_PACKET_SIZE 1024
@@ -67,6 +68,12 @@ BankManagementSystemUDP_controller::~BankManagementSystemUDP_controller() {
 void BankManagementSystemUDP_controller::printtest(BankManagementSystem_Model::st_customer* aa)
 {
 	cout << aa->Name << endl;
+}
+
+void BankManagementSystemUDP_controller::checkConn(){
+
+	send_rec_Msg("25");
+
 }
 
 // open node.js command prompt and manually start node js server
@@ -113,7 +120,7 @@ string BankManagementSystemUDP_controller::testConn()
 
 	// time out for socket
 	struct timeval read_timeout;
-	read_timeout.tv_sec = 10;
+	read_timeout.tv_sec = 5;
 	read_timeout.tv_usec = 0;
 	int sockoptRes = setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &read_timeout, sizeof read_timeout);
 	if (sockoptRes != 0){
@@ -146,10 +153,15 @@ string BankManagementSystemUDP_controller::testConn()
 
 	if (n == -1){
 		fprintf(stderr, "Value of errno: %d\n", errno);
-		perror("Error printed by perror");
+		//perror("Error printed by perror");
 		if(errno == 1)
 		{
-			printf("Socket timeout, server may be offline.");
+			cout << "Socket timeout, server error." << endl;
+
+
+		} else if (errno == 11){
+			cout << "Connection issue to server, it may be offline. Check if is running before continuing." << endl;
+
 		}
 	}
 
@@ -212,7 +224,7 @@ string BankManagementSystemUDP_controller::send_rec_Msg(string msgToSend)
 
 	// time out for socket
 	struct timeval read_timeout;
-	read_timeout.tv_sec = 10;
+	read_timeout.tv_sec = 3;
 	read_timeout.tv_usec = 0;
 	int sockoptRes = setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &read_timeout, sizeof read_timeout);
 	if (sockoptRes != 0){
@@ -241,7 +253,12 @@ string BankManagementSystemUDP_controller::send_rec_Msg(string msgToSend)
 		perror("Error printed by perror");
 		if(errno == 1)
 		{
-			printf("Socket timeout, server may be offline.");
+
+			cout << "Socket timeout, server error." << endl;
+			return "10";
+		} else if (errno == 11){
+			cout << "Connection issue to server, it may be offline. Check if is running before continuing." << endl;
+			return "10";
 		}
 	}
 
@@ -252,7 +269,7 @@ string BankManagementSystemUDP_controller::send_rec_Msg(string msgToSend)
 
 	close(sockfd);
 
-	cout << "Returned JSON: " << rec_Buffer << endl;
+	cout << "Returned packer from server: " << rec_Buffer << endl;
 
 	return rec_Buffer;
 }
@@ -348,60 +365,61 @@ string BankManagementSystemUDP_controller::createUDPPacket(int reqCmd, BankManag
 	string returnedJSON = send_rec_Msg(s_fullPack);
 	//cout << "rec string: " << returnedJSON << endl;
 
-	// convert to JSON so the "success" value can be checked whether it is:
-	//  3 to indicate affectedRows json
-	// 	2 to  an empty JSON was returned from the DB query
-	//  1 for normal OK
-	// 	0 an API error occurred (either in the API itself or DB error)
-	// buffer is a json text, so need to serialize it.
-	try {
-		json j_complete = json::parse(returnedJSON);
+	char b_respCODE[CMD_SIZE]; // size 2
+	std::fill_n(b_respCODE, CMD_SIZE, '0');
+	for(int i = 0; i < CMD_SIZE; i ++){
+		b_respCODE[i] = returnedJSON[i];
 
-		// check empty json returned, so check the string
-		/*
-		if(returnedJSON.compare(0,1,"[") == 0 && returnedJSON.compare(1,1,"]") == 0)
+	}
+	//cout << "code raw: " << b_respCODE << endl;
+
+	int resp_code = std::stoi(b_respCODE);
+	//cout << "code int: " << resp_code << endl;
+
+	switch(resp_code)
+	{
+		case 0:
 		{
-			returnedJSON = "[{ \"id_cust\" : -1, \"id_account\" : -1}]";
-			//cout << "here !! " << returnedJSON << endl;
-		}*/
+			// error or expecting string message from server. looking for message
+			string err_msg = returnedJSON.substr(CMD_SIZE, returnedJSON.length());
+			cout << "LOG: Message from server: " << err_msg << endl;
 
-		int suc_tag = j_complete.at(0)["success"];
-		cout << "success tag: " << suc_tag << endl;
+			//cout << "Error message from server: " << err_msg << endl;
 
-		if (suc_tag == 0){
-			// error
-			// print error for developer
-			string err_msg = j_complete.at(0)["err_message"];
-			cout << "Error message from server: " << err_msg << endl;
-
-			returnedJSON = "[{ \"id_cust\" : -1, \"id_account\" : -1}]";
-		} else if(suc_tag == 1){
-			// normal OK
-			// remove success JSON at front
-			j_complete.erase(0);
-			returnedJSON = j_complete.dump();	// serialize to string
-
-
-		} else if(suc_tag == 2){
-			// empty returned from db query
-			returnedJSON = "[{ \"id_cust\" : -1, \"id_account\" : -1}]";
-		} else if(suc_tag == 3){
-			int aff = j_complete.at(1)["affectedRows"];
-
-			returnedJSON = to_string(aff);
-
-		} else {
-			// something else wrong.
 			returnedJSON = "[{ \"id_cust\" : -1, \"id_account\" : -1}]";
 		}
-	} catch (json::parse_error& e) {
-		// output exception information
-		std::cout << "message: " << e.what() << '\n'
-				  << "exception id: " << e.id << '\n'
-				  << "byte position of error: " << e.byte << std::endl;
+			break;
+		case 1:
+			// normal OK
+			returnedJSON = returnedJSON.substr(CMD_SIZE, returnedJSON.length());
+			break;
+
+		case 2:
+			// empty returned from db query
+			returnedJSON = "[{ \"id_cust\" : -1, \"id_account\" : -1}]";
+			break;
+		case 3:
+		{
+			// expecting non-json
+			string aff_rows = returnedJSON.substr(CMD_SIZE, returnedJSON.length());
+			int i_aff_rows = std::stoi(aff_rows);
+			returnedJSON = to_string(i_aff_rows);
+		}
+			break;
+
+		case 10:
+			returnedJSON = "[{ \"id_cust\" : -1, \"id_account\" : -1}]";
+			break;
+
+		default:
+			returnedJSON = "[{ \"id_cust\" : -1, \"id_account\" : -1}]";
+			break;
+
 	}
 
-	cout << "returned: " << returnedJSON <<endl;
+
+
+	//cout << "returned: " << returnedJSON <<endl;
 
 	return returnedJSON;
 }

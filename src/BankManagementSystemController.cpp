@@ -29,6 +29,10 @@ BankManagementSystem_Model model;
 BankManagementSystemUDP_controller UDP_contr;
 
 BankManagementSystem_Controller::BankManagementSystem_Controller(BankManagementSystem_View BMS_view, BankManagementSystem_Model BMS_model) {
+
+	//check initial server status
+	serverStatus();
+
 	view = BMS_view;
 	model = BMS_model;
 
@@ -101,6 +105,13 @@ BankManagementSystem_Controller::BankManagementSystem_Controller(BankManagementS
 	}
 
 }
+
+void BankManagementSystem_Controller::serverStatus(){
+	BankManagementSystem_Model::st_customer placeholder_cust_end;
+	BankManagementSystem_Model::st_account placeholder_acc_end;
+	string retJSON_end = UDP_contr.createUDPPacket(40, placeholder_cust_end, placeholder_acc_end, 0, 0, 0);
+}
+
 
 void BankManagementSystem_Controller::closeProgram(){
 	BankManagementSystem_Model::st_customer placeholder_cust_end;

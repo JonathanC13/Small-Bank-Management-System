@@ -17,6 +17,7 @@ public:
 	virtual ~BankManagementSystemUDP_controller();
 
 	void printtest(BankManagementSystem_Model::st_customer* aa);
+	void checkConn();
 	string testConn();
 
 	string send_rec_Msg(string msgToSend);	// routine to send the desired msg and return the response string buffer
