@@ -236,6 +236,7 @@ void BankManagementSystem_Controller::viewAllCustomers()
 	BankManagementSystem_Model::st_account placeholder_acc;
 	emptyCust.ID = -2;
 	string retJSON = UDP_contr.createUDPPacket(2, emptyCust, placeholder_acc, 0, 0, 0);
+
 	// 3. model creates an array of st_customers from parsing the JSON
 	std::vector<BankManagementSystem_Model::st_customer> viewingCustomers = model.getAllCustomers(retJSON);
 

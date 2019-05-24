@@ -73,6 +73,9 @@ void BankManagementSystem_View::printAllCustomer(std::vector<BankManagementSyste
 	cout << "### Displaying all current customers ###" << endl;
 	for (std::vector<BankManagementSystem_Model::st_customer>::iterator iter = customers.begin(); iter != customers.end(); ++iter)
 	{
+		if (iter.base()->ID == -1){
+			continue;
+		}
 		cout << "-----" << endl;
 		cout << "Customer Name: " << iter.base()->Name << endl;
 		cout << "Customer ID: " << iter.base()->ID << endl;

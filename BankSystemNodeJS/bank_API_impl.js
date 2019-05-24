@@ -31,12 +31,14 @@ exports.createCustomer = function(name, pin, date, num_acc, num_trans, callback)
   con.connect(function(err) {
     if (err){
       console.log("Error: createCustomer, could not connect to database.");
+      console.log(err);
       throw err;
     }
     console.log("log: createCustomer: connected to DB.");
     con.query("SELECT id_cust FROM customers", function (err, rows, result, fields) {
       if (err){
         console.log("Error: createCustomer select ID query");
+        console.log(err);
         throw err;
       }
       let max = 0;
@@ -59,8 +61,10 @@ exports.createCustomer = function(name, pin, date, num_acc, num_trans, callback)
 
       con.query(sql_ins, params, function (err, result, fields) {
         if (err){
-          console.log("Error: createCustomer insert query");
+          console.log("Error: createCustomer insert query:");
+          console.log(err);
           throw err;
+
         }
 
         exports.getCustomers(assignedID, function(result){
@@ -98,6 +102,7 @@ exports.getCustomers = function(id, callback){
   con.connect(function(err) {
     if (err){
       console.log("Error: getCustomers, could not connect to database.");
+      console.log(err);
       throw err;
     }
     var sql_q = "SELECT * FROM customers";
@@ -116,6 +121,7 @@ exports.getCustomers = function(id, callback){
     con.query(sql_q, params, function (err, result, fields) {
       if (err){
         console.log("Error: getCustomers select query.");
+        console.log(err);
         throw err;
       }
 
@@ -153,6 +159,7 @@ exports.updateCustomer = function(id, name, pin, num_acc, num_trans, callback){
   con.connect(function(err) {
     if (err){
       console.log("Error: updateCustomer, could not connect to database.");
+      console.log(err);
       throw err;
     }
 
@@ -172,6 +179,7 @@ exports.updateCustomer = function(id, name, pin, num_acc, num_trans, callback){
       if (err){
         console.log(q.sql);
         console.log("Error: updateCustomer query.");
+        console.log(err);
         throw err;
       }
       return callback(result.affectedRows);
@@ -190,6 +198,7 @@ exports.removeCustomer = function(id, callback){
   con.connect(function(err) {
     if (err){
       console.log("Error: removeCustomer, could not connect to database.");
+      console.log(err);
       throw err;
     }
     console.log("log: removeCustomer: connected to DB.");
@@ -199,6 +208,7 @@ exports.removeCustomer = function(id, callback){
     con.query(sql_del, params, function (err, result, fields) {
       if (err){
         console.log("Error: removeCustomer delete query.");
+        console.log(err);
         throw err;
       }
       return callback(result.affectedRows);
@@ -218,6 +228,7 @@ exports.getAllAccounts = function(id, callback){
   con.connect(function(err) {
     if (err){
       console.log("Error: getAllAccounts, could not connect to database.");
+      console.log(err);
       throw err;
     }
 
@@ -234,6 +245,7 @@ exports.getAllAccounts = function(id, callback){
     con.query(sql_q, params, function (err, result, fields) {
       if (err){
         console.log("Error: getAllAccounts select query.");
+        console.log(err);
         throw err;
       }
       return callback(result);
@@ -253,6 +265,7 @@ exports.getCustAccounts = function(ownerID, callback){
   con.connect(function(err) {
     if (err){
       console.log("Error: getCustAccounts, could not connect to database.");
+      console.log(err);
       throw err;
     }
 
@@ -269,6 +282,7 @@ exports.getCustAccounts = function(ownerID, callback){
     con.query(sql_q, params, function (err, result, fields) {
       if (err){
         console.log("Error: getCustAccounts select query.");
+        console.log(err);
         throw err;
       }
       return callback(result);
@@ -285,6 +299,7 @@ exports.updateAccount = function(ownerID, accID, tot_AMT, callback){
   con.connect(function(err) {
     if (err){
       console.log("Error: updateAccount, could not connect to database.");
+      console.log(err);
       throw err;
     }
 
@@ -301,6 +316,7 @@ exports.updateAccount = function(ownerID, accID, tot_AMT, callback){
     con.query(sql_q, params, function (err, result, fields) {
       if (err){
         console.log("Error: updateAccount query.");
+        console.log(err);
         throw err;
       }
       return callback(result.affectedRows);
@@ -320,6 +336,7 @@ exports.removeAccount = function(id, callback){
   con.connect(function(err) {
     if (err){
       console.log("Error: removeAccount, could not connect to database.");
+      console.log(err);
       throw err;
     }
     console.log("log: removeAccount: connected to DB.");
@@ -330,6 +347,7 @@ exports.removeAccount = function(id, callback){
     con.query(sql_del, params, function (err, result, fields) {
       if (err){
         console.log("Error: removeAccount delete query.");
+        console.log(err);
         throw err;
       }
       return callback(result.affectedRows);
@@ -346,6 +364,7 @@ exports.createAccount = function(owner_id, datecr_acc, accountAmt, callback){
   con.connect(function(err) {
     if (err){
       console.log("Error: createAccount, could not connect to database.");
+      console.log(err);
       throw err;
     }
     console.log("log: createAccount: connected to DB.");
@@ -354,6 +373,7 @@ exports.createAccount = function(owner_id, datecr_acc, accountAmt, callback){
     con.query("SELECT id_account FROM accounts", function (err, rows, result, fields) {
       if (err){
         console.log("Error: createAccount select account ID query");
+        console.log(err);
         throw err;
       }
       let max = 0;
@@ -378,6 +398,7 @@ exports.createAccount = function(owner_id, datecr_acc, accountAmt, callback){
         if (err){
           console.log(q.sql);
           console.log("Error: createAccount insert query");
+          console.log(err);
           throw err;
         }
 

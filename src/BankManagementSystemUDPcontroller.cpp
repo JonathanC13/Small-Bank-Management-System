@@ -8,6 +8,9 @@
 #include "BankManagementSystemUDPcontroller.h"
 #include "BankManagementSystemModel.h"
 
+#include "json.hpp"
+// for convenience
+using json = nlohmann::json;
 
 using namespace std;
 #include <string>
@@ -23,7 +26,7 @@ using namespace std;
 #include <netinet/in.h>
 
 #define PORT     8081
-#define MAXLINE 1024
+#define MAXLINE 1024000
 #define nodePORT	8080
 
 #define TOTAL_PACKET_SIZE 1024
@@ -343,13 +346,62 @@ string BankManagementSystemUDP_controller::createUDPPacket(int reqCmd, BankManag
 	// </Complete packet>
 
 	string returnedJSON = send_rec_Msg(s_fullPack);
+	//cout << "rec string: " << returnedJSON << endl;
 
-	// check empty json returned, so check the string
-	if(returnedJSON.compare(0,1,"[") == 0 && returnedJSON.compare(1,1,"]") == 0)
-	{
-		returnedJSON = "[{ \"id_cust\" : -1, \"id_account\" : -1}]";
-		//cout << "here !! " << returnedJSON << endl;
+	// convert to JSON so the "success" value can be checked whether it is:
+	//  3 to indicate affectedRows json
+	// 	2 to  an empty JSON was returned from the DB query
+	//  1 for normal OK
+	// 	0 an API error occurred (either in the API itself or DB error)
+	// buffer is a json text, so need to serialize it.
+	try {
+		json j_complete = json::parse(returnedJSON);
+
+		// check empty json returned, so check the string
+		/*
+		if(returnedJSON.compare(0,1,"[") == 0 && returnedJSON.compare(1,1,"]") == 0)
+		{
+			returnedJSON = "[{ \"id_cust\" : -1, \"id_account\" : -1}]";
+			//cout << "here !! " << returnedJSON << endl;
+		}*/
+
+		int suc_tag = j_complete.at(0)["success"];
+		cout << "success tag: " << suc_tag << endl;
+
+		if (suc_tag == 0){
+			// error
+			// print error for developer
+			string err_msg = j_complete.at(0)["err_message"];
+			cout << "Error message from server: " << err_msg << endl;
+
+			returnedJSON = "[{ \"id_cust\" : -1, \"id_account\" : -1}]";
+		} else if(suc_tag == 1){
+			// normal OK
+			// remove success JSON at front
+			j_complete.erase(0);
+			returnedJSON = j_complete.dump();	// serialize to string
+
+
+		} else if(suc_tag == 2){
+			// empty returned from db query
+			returnedJSON = "[{ \"id_cust\" : -1, \"id_account\" : -1}]";
+		} else if(suc_tag == 3){
+			int aff = j_complete.at(1)["affectedRows"];
+
+			returnedJSON = to_string(aff);
+
+		} else {
+			// something else wrong.
+			returnedJSON = "[{ \"id_cust\" : -1, \"id_account\" : -1}]";
+		}
+	} catch (json::parse_error& e) {
+		// output exception information
+		std::cout << "message: " << e.what() << '\n'
+				  << "exception id: " << e.id << '\n'
+				  << "byte position of error: " << e.byte << std::endl;
 	}
+
+	cout << "returned: " << returnedJSON <<endl;
 
 	return returnedJSON;
 }

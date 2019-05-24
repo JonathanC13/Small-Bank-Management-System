@@ -74,7 +74,9 @@ vector<BankManagementSystem_Model::st_customer> BankManagementSystem_Model::getA
 	pt_customers = new_pt_customers;
 	// test json parser
 	// buffer is a json text, so need to serialize it.
-	json j_complete = json::parse(buf);
+	try {
+		json j_complete = json::parse(buf);
+
 
 	// print to see if ok
 	//cout << endl << j_complete << endl;
@@ -104,6 +106,13 @@ vector<BankManagementSystem_Model::st_customer> BankManagementSystem_Model::getA
 		//count ++;
 
 	}
+	} catch (json::parse_error& e)
+	{
+		// output exception information
+		std::cout << "message: " << e.what() << '\n'
+				  << "exception id: " << e.id << '\n'
+				  << "byte position of error: " << e.byte << std::endl;
+	 }
 
 	//BankManagementSystem_Model::setNumCustomers(count);
 	// just peeking at an attribute

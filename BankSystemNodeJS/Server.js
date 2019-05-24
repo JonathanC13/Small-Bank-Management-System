@@ -34,6 +34,14 @@ const TRANS_AMT_SIZE			   = 10;// total amount to transfer size
 // </Packet body>
 // </UDP packet segments>
 
+function isEmpty(obj) {
+    for(var key in obj) {
+        if(obj.hasOwnProperty(key))
+            return false;
+    }
+    return true;
+}
+
 const dgram = require('dgram');
 const server = dgram.createSocket('udp4');  // Open socket for udp transfers
 //const client = dgram.createSocket('udp4');
@@ -221,190 +229,351 @@ server.on('message', (msg, rinfo) => {
   var i_amount = parseInt(s_amount, 10);
   // </Extract amount>
   // </Extract information from udp packet>
-
   // <Handle request commands>
   if(i_cmd == 1){
     // request command: Create customer
-    impl_API.createCustomer(s_name, i_PIN, s_date, i_num_acc, i_num_trans, function(result){
-      var stuff_i_want = result;  // json obj
+    try {
+      impl_API.createCustomer(s_name, i_PIN, s_date, i_num_acc, i_num_trans, function(result){
 
-      // convert JSON to string
-      let jsonStr = JSON.stringify(stuff_i_want);
-      console.log("SocketLog: create customer JSON = " + jsonStr);
-      // send response
-      //const message = Buffer.from('Some bytes');
-      const message = Buffer.from(jsonStr);
+        var stuff_i_want = result;  // json obj
+
+        if(isEmpty(stuff_i_want)){
+          // empty JSON, so create JSON with success code = 2
+          let resp_empty = '{"success":2}';
+          const message = Buffer.from(resp_empty);
+          server.send(message, rinfo.port, rinfo.address, (err) => {
+            // sending to client
+          });
+        } else {
+          // not empty
+
+          // add success status
+          let resp_success = '{\"success\": 1}';
+          var json_resp = JSON.parse(resp_success);
+          stuff_i_want.unshift(json_resp);
+          console.log(stuff_i_want);
+
+          // convert JSON to string
+          let jsonStr = JSON.stringify(stuff_i_want);
+          console.log("SocketLog: create customer JSON = " + jsonStr);
+          // send response
+          //const message = Buffer.from('Some bytes');
+          const message = Buffer.from(jsonStr);
+          server.send(message, rinfo.port, rinfo.address, (err) => {
+            // sending to client
+          });
+        }
+
+      });
+
+    } catch (e){
+      // send error code indicating API error
+      let s_e = e.toString();
+      let resp_error = '[{"success":0, "err_message":' + s_e + '}]';
+      const message = Buffer.from(resp_error);
       server.send(message, rinfo.port, rinfo.address, (err) => {
         // sending to client
       });
-    });
+    }
   }
   else if(i_cmd == 2){
     // request command: select all customers
-    impl_API.getCustomers(-2, function(result){
-      var stuff_i_want = result;  // json obj
-      console.log(stuff_i_want);
+    try {
+      impl_API.getCustomers(-2, function(result){
+        var stuff_i_want = result;  // json obj
 
-      // convert JSON to string
-      let jsonStr = JSON.stringify(stuff_i_want);
-      console.log("SocketLog: view all customer JSON = " + jsonStr);
-      // send response
-      //const message = Buffer.from('Some bytes');
-      const message = Buffer.from(jsonStr);
-      server.send(message, rinfo.port, rinfo.address, (err) => {
-        //console.log(rinfo.address);
-        //console.log(rinfo.port);
-        //console.log(message);
+        if(isEmpty(stuff_i_want)){
+          // empty JSON, so create JSON with success code = 2
+          let resp_empty = '{"success":2}';
+          const message = Buffer.from(resp_empty);
+          server.send(message, rinfo.port, rinfo.address, (err) => {
+            // sending to client
+          });
+        } else {
+          let resp_success = '{\"success\": 1}';
+          var json_resp = JSON.parse(resp_success);
+          stuff_i_want.unshift(json_resp);
+          console.log(stuff_i_want);
 
-        //server.close();
+          // convert JSON to string
+          let jsonStr = JSON.stringify(stuff_i_want);
+
+          console.log("SocketLog: view all customer JSON = " + jsonStr);
+          // send response
+          //const message = Buffer.from('Some bytes');
+          const message = Buffer.from(jsonStr);
+          server.send(message, rinfo.port, rinfo.address, (err) => {
+            //console.log(rinfo.address);
+            //console.log(rinfo.port);
+            //console.log(message);
+
+            //server.close();
+          });
+        }
       });
-
-    });
-  }
-  else if(i_cmd == 3){
-    // request command: select customer
-    impl_API.getCustomers(i_ID, function(result){
-      var stuff_i_want = result;  // json obj
-      console.log(stuff_i_want);
-
-/*
-      if (result.length === 0){
-        console.log("json is empty");
-      }
-*/
-      // convert JSON to string
-      let jsonStr = JSON.stringify(stuff_i_want);
-      console.log("SocketLog: view selected customer JSON = " + jsonStr);
-      // send response
-      //const message = Buffer.from('Some bytes');
-      const message = Buffer.from(jsonStr);
-      server.send(message, rinfo.port, rinfo.address, (err) => {
-        //console.log(rinfo.address);
-        //console.log(rinfo.port);
-        //console.log(message);
-
-        //server.close();
-      });
-    });
-  }
-  else if(i_cmd == 4){
-    // update a customer row
-    impl_API.updateCustomer(i_ID, s_name, i_PIN, i_num_acc, i_num_trans, function(result){
-      var stuff_i_want = result.toString();  // json obj
-      console.log(stuff_i_want);
-
-      const message = Buffer.from(stuff_i_want);
-      server.send(message, rinfo.port, rinfo.address, (err) => {
-        //console.log(rinfo.address);
-        //console.log(rinfo.port);
-        //console.log(message);
-
-        //server.close();
-      });
-    });
-  } else if(i_cmd == 5){
-    // request command: remove customer
-    impl_API.removeCustomer(i_ID, function(result){
-      var stuff_i_want = result.toString();  // json obj
-      console.log(stuff_i_want);
-
-      const message = Buffer.from(stuff_i_want);
-      server.send(message, rinfo.port, rinfo.address, (err) => {
-        //console.log(rinfo.address);
-        //console.log(rinfo.port);
-        //console.log(message);
-
-        //server.close();
-      });
-    });
-  } else if(i_cmd == 6){
-    // request command: get all accounts (-2) or to specific account ID (sent through i_SRC segment)
-    impl_API.getAllAccounts(i_accID, function(result){
-      var stuff_i_want = result;  // json obj
-      console.log(stuff_i_want);
-
-      // convert JSON to string
-      let jsonStr = JSON.stringify(stuff_i_want);
-      console.log("SocketLog: view all customer JSON = " + jsonStr);
-      // send response
-      //const message = Buffer.from('Some bytes');
-      const message = Buffer.from(jsonStr);
-      server.send(message, rinfo.port, rinfo.address, (err) => {
-        //console.log(rinfo.address);
-        //console.log(rinfo.port);
-        //console.log(message);
-
-        //server.close();
-      });
-
-    });
-  } else if(i_cmd == 7){
-    // request command: get all accounts associated to owner ID
-    impl_API.getCustAccounts(i_ID, function(result){
-      var stuff_i_want = result;  // json obj
-      console.log(stuff_i_want);
-
-      // convert JSON to string
-      let jsonStr = JSON.stringify(stuff_i_want);
-      console.log("SocketLog: view all customer JSON = " + jsonStr);
-      // send response
-      //const message = Buffer.from('Some bytes');
-      const message = Buffer.from(jsonStr);
-      server.send(message, rinfo.port, rinfo.address, (err) => {
-        //console.log(rinfo.address);
-        //console.log(rinfo.port);
-        //console.log(message);
-
-        //server.close();
-      });
-
-    });
-  } else if(i_cmd == 8){
-    // request command: update account
-    impl_API.updateAccount(i_ownerID, i_accID, i_accAMT, function(result){
-      var stuff_i_want = result.toString();  // json obj
-      console.log(stuff_i_want);
-
-      const message = Buffer.from(stuff_i_want);
-      server.send(message, rinfo.port, rinfo.address, (err) => {
-        //console.log(rinfo.address);
-        //console.log(rinfo.port);
-        //console.log(message);
-
-        //server.close();
-      });
-    });
-
-  } else if(i_cmd == 9){
-    // request command: remove specific account
-    impl_API.removeAccount(i_accID, function(result){
-      var stuff_i_want = result.toString();  // json obj
-      console.log(stuff_i_want);
-
-      const message = Buffer.from(stuff_i_want);
-      server.send(message, rinfo.port, rinfo.address, (err) => {
-        //console.log(rinfo.address);
-        //console.log(rinfo.port);
-        //console.log(message);
-
-        //server.close();
-      });
-    });
-  } else if(i_cmd == 10){
-    // request command: Create account
-    impl_API.createAccount(i_ID, s_accdate, i_accAMT, function(result){
-      var stuff_i_want = result;  // json obj
-
-      // convert JSON to string
-      let jsonStr = JSON.stringify(stuff_i_want);
-      console.log("SocketLog: create customer JSON = " + jsonStr);
-      // send response
-      //const message = Buffer.from('Some bytes');
-      const message = Buffer.from(jsonStr);
+    } catch (e){
+      // send error code indicating API error
+      let s_e = e.toString();
+      let resp_error = '[{"success":0, "err_message":' + s_e + '}]';
+      const message = Buffer.from(resp_error);
       server.send(message, rinfo.port, rinfo.address, (err) => {
         // sending to client
       });
-    });
+    }
+
+  }
+  else if(i_cmd == 3){
+    // request command: select customer
+    try {
+      impl_API.getCustomers(i_ID, function(result){
+        var stuff_i_want = result;  // json obj
+
+        if(isEmpty(stuff_i_want)){
+          // empty JSON, so create JSON with success code = 2
+          let resp_empty = '[{"success":2}]';
+          const message = Buffer.from(resp_empty);
+          server.send(message, rinfo.port, rinfo.address, (err) => {
+            // sending to client
+          });
+        } else {
+
+          let resp_success = '{\"success\": 1}';
+          var json_resp = JSON.parse(resp_success);
+          stuff_i_want.unshift(json_resp);
+          console.log(stuff_i_want);
+
+          // convert JSON to string
+          let jsonStr = JSON.stringify(stuff_i_want);
+          console.log("SocketLog: view selected customer JSON = " + jsonStr);
+          // send response
+          //const message = Buffer.from('Some bytes');
+          const message = Buffer.from(jsonStr);
+          server.send(message, rinfo.port, rinfo.address, (err) => {
+            //console.log(rinfo.address);
+            //console.log(rinfo.port);
+            //console.log(message);
+
+            //server.close();
+          });
+        }
+      });
+
+    } catch(e){
+      // send error code indicating API error
+      let s_e = e.toString();
+      let resp_error = '[{"success":0, "err_message":' + s_e + '}]';
+      const message = Buffer.from(resp_error);
+      server.send(message, rinfo.port, rinfo.address, (err) => {
+        // sending to client
+      });
+    }
+  }
+  else if(i_cmd == 4){
+    // update a customer row
+    try {
+      impl_API.updateCustomer(i_ID, s_name, i_PIN, i_num_acc, i_num_trans, function(result){
+        var stuff_i_want = parseInt(result, 10);  // json obj
+        let resp_success = '[{\"success\": 3}, {\"affectedRows\":' + stuff_i_want + '}]';
+
+        console.log(resp_success);
+
+        const message = Buffer.from(resp_success);
+        server.send(message, rinfo.port, rinfo.address, (err) => {
+          //console.log(rinfo.address);
+          //console.log(rinfo.port);
+          //console.log(message);
+
+          //server.close();
+        });
+      });
+    } catch (e){
+      // send error code indicating API error
+      let s_e = e.toString();
+      let resp_error = '[{"success":0, "err_message":' + s_e + '}]';
+      const message = Buffer.from(resp_error);
+      server.send(message, rinfo.port, rinfo.address, (err) => {
+        // sending to client
+      });
+    }
+  } else if(i_cmd == 5){
+    // request command: remove customer
+    try {
+      impl_API.removeCustomer(i_ID, function(result){
+        var stuff_i_want = parseInt(result, 10);;  // int
+        let resp_success = '[{\"success\": 3}, {\"affectedRows\":' + stuff_i_want + '}]';
+
+        console.log(resp_success);
+
+        const message = Buffer.from(resp_success);
+        server.send(message, rinfo.port, rinfo.address, (err) => {
+          //console.log(rinfo.address);
+          //console.log(rinfo.port);
+          //console.log(message);
+
+          //server.close();
+        });
+      });
+    } catch (e){
+      // send error code indicating API error
+      let s_e = e.toString();
+      let resp_error = '[{"success":0, "err_message":' + s_e + '}]';
+      const message = Buffer.from(resp_error);
+      server.send(message, rinfo.port, rinfo.address, (err) => {
+        // sending to client
+      });
+    }
+  } else if(i_cmd == 6){
+    // request command: get all accounts (-2) or to specific account ID (sent through i_SRC segment)
+    try {
+      impl_API.getAllAccounts(i_accID, function(result){
+        var stuff_i_want = result;  // json obj
+        let resp_success = '{\"success\": 1}';
+        var json_resp = JSON.parse(resp_success);
+        stuff_i_want.unshift(json_resp);
+        console.log(stuff_i_want);
+
+        // convert JSON to string
+        let jsonStr = JSON.stringify(stuff_i_want);
+        console.log("SocketLog: view all customer JSON = " + jsonStr);
+        // send response
+        //const message = Buffer.from('Some bytes');
+        const message = Buffer.from(jsonStr);
+        server.send(message, rinfo.port, rinfo.address, (err) => {
+          //console.log(rinfo.address);
+          //console.log(rinfo.port);
+          //console.log(message);
+
+          //server.close();
+        });
+
+      });
+    } catch (e) {
+      // send error code indicating API error
+      let s_e = e.toString();
+      let resp_error = '[{"success":0, "err_message":' + s_e + '}]';
+      const message = Buffer.from(resp_error);
+      server.send(message, rinfo.port, rinfo.address, (err) => {
+        // sending to client
+      });
+    }
+  } else if(i_cmd == 7){
+    // request command: get all accounts associated to owner ID
+    try {
+      impl_API.getCustAccounts(i_ID, function(result){
+        var stuff_i_want = result;  // json obj
+        let resp_success = '{\"success\": 1}';
+        var json_resp = JSON.parse(resp_success);
+        stuff_i_want.unshift(json_resp);
+        console.log(stuff_i_want);
+
+        // convert JSON to string
+        let jsonStr = JSON.stringify(stuff_i_want);
+        console.log("SocketLog: view all customer JSON = " + jsonStr);
+        // send response
+        //const message = Buffer.from('Some bytes');
+        const message = Buffer.from(jsonStr);
+        server.send(message, rinfo.port, rinfo.address, (err) => {
+          //console.log(rinfo.address);
+          //console.log(rinfo.port);
+          //console.log(message);
+
+          //server.close();
+        });
+
+      });
+    } catch (e){
+      // send error code indicating API error
+      let s_e = e.toString();
+      let resp_error = '[{"success":0, "err_message":' + s_e + '}]';
+      const message = Buffer.from(resp_error);
+      server.send(message, rinfo.port, rinfo.address, (err) => {
+        // sending to client
+      });
+    }
+  } else if(i_cmd == 8){
+    // request command: update account
+    try {
+      impl_API.updateAccount(i_ownerID, i_accID, i_accAMT, function(result){
+        var stuff_i_want = parseInt(result, 10);;  // json obj
+        let resp_success = '[{\"success\": 3}, {\"affectedRows\":' + stuff_i_want + '}]';
+
+        console.log(resp_success);
+
+        const message = Buffer.from(resp_success);
+        server.send(message, rinfo.port, rinfo.address, (err) => {
+          //console.log(rinfo.address);
+          //console.log(rinfo.port);
+          //console.log(message);
+
+          //server.close();
+        });
+      });
+    } catch (e){
+      // send error code indicating API error
+      let s_e = e.toString();
+      let resp_error = '[{"success":0, "err_message":' + s_e + '}]';
+      const message = Buffer.from(resp_error);
+      server.send(message, rinfo.port, rinfo.address, (err) => {
+        // sending to client
+      });
+    }
+  } else if(i_cmd == 9){
+
+    // request command: remove specific account
+    try {
+      impl_API.removeAccount(i_accID, function(result){
+        var stuff_i_want = parseInt(result, 10);;  // json obj
+        let resp_success = '[{\"success\": 3}, {\"affectedRows\":' + stuff_i_want + '}]';
+
+        console.log(resp_success);
+
+        const message = Buffer.from(resp_success);
+        server.send(message, rinfo.port, rinfo.address, (err) => {
+          //console.log(rinfo.address);
+          //console.log(rinfo.port);
+          //console.log(message);
+
+          //server.close();
+        });
+      });
+    } catch (e){
+      // send error code indicating API error
+      let s_e = e.toString();
+      let resp_error = '[{"success":0, "err_message":' + s_e + '}]';
+      const message = Buffer.from(resp_error);
+      server.send(message, rinfo.port, rinfo.address, (err) => {
+        // sending to client
+      });
+    }
+  } else if(i_cmd == 10){
+    // request command: Create account
+    try {
+      impl_API.createAccount(i_ID, s_accdate, i_accAMT, function(result){
+        var stuff_i_want = result;  // json obj
+        let resp_success = '{\"success\": 1}';
+        var json_resp = JSON.parse(resp_success);
+        stuff_i_want.unshift(json_resp);
+        console.log(stuff_i_want);
+
+        // convert JSON to string
+        let jsonStr = JSON.stringify(stuff_i_want);
+        console.log("SocketLog: create customer JSON = " + jsonStr);
+        // send response
+        //const message = Buffer.from('Some bytes');
+        const message = Buffer.from(jsonStr);
+        server.send(message, rinfo.port, rinfo.address, (err) => {
+          // sending to client
+        });
+      });
+    } catch (e){
+      // send error code indicating API error
+      let s_e = e.toString();
+      let resp_error = '[{"success":0, "err_message":' + s_e + '}]';
+      const message = Buffer.from(resp_error);
+      server.send(message, rinfo.port, rinfo.address, (err) => {
+        // sending to client
+      });
+    }
   }
    else if (i_cmd == 50){
     var close_msg = "Server closing ...";
