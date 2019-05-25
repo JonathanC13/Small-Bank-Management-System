@@ -25,21 +25,59 @@ function closeSQL(con){
 }
 // </Close connection>
 
+// name:string, pin:int, date:string, num_acc:int, num_trans:int
 exports.createCustomer = function(name, pin, date, num_acc, num_trans, callback){
+
+  // first line of defense for invalid types, second is during the SQL query. If the wrong datatype is passed in the SQL query it will return an error of its own.
+  // <validate input paramter types>
+  var final_err_msg = "";
+  if(typeof name !== 'object'){
+    // name input was not a string
+    final_err_msg = final_err_msg + "| Name input to API was not a string object |";
+  }
+
+  if (!(Number.isInteger(pin))){
+    // pin input was not an integer, length can vary for future special codes.
+    final_err_msg = final_err_msg + "| Pin input to API was not an valid number |";
+  }
+
+  if(typeof date !== 'object'){
+    // name input was not a string
+    final_err_msg = final_err_msg + "| Date input to API was not a string object |";
+  }
+
+  if (!(Number.isInteger(num_acc))){
+    // pin input was not an integer, length can vary for future special codes.
+    final_err_msg = final_err_msg + "| Number of accounts input to API was not an valid number |";
+  }
+
+  if (!(Number.isInteger(num_trans))){
+    // pin input was not an integer, length can vary for future special codes.
+    final_err_msg = final_err_msg + "| Number of transactions input to API was not an valid number |";
+  }
+
+  if(final_err_msg.length != 0){
+    // means there are some errors in the inputs that were caught
+    throw final_err_msg;
+  }
+
+  // </validate input paramter types>
+
+
   const con = connectDBSQL();
 
   con.connect(function(err) {
     if (err){
       console.log("Error: createCustomer, could not connect to database.");
       console.log(err);
-      throw err;
+      return callback(err.code);
     }
     console.log("log: createCustomer: connected to DB.");
     con.query("SELECT id_cust FROM customers", function (err, rows, result, fields) {
       if (err){
         console.log("Error: createCustomer select ID query");
         console.log(err);
-        throw err;
+        return callback(err.code);
       }
       let max = 0;
       rows.forEach(function(row) {
@@ -59,34 +97,39 @@ exports.createCustomer = function(name, pin, date, num_acc, num_trans, callback)
       //params.push(cust_columns[0], cust_columns[1], cust_columns[2], cust_columns[3],cust_columns[4], cust_columns[5], assignedID, name, pin, date, 0, 0);
       params.push(...cust_columns, ...vals);
 
-      con.query(sql_ins, params, function (err, result, fields) {
+
+      var q = con.query(sql_ins, params, function (err, result, fields) {
         if (err){
+          console.log(q.sql);
           console.log("Error: createCustomer insert query:");
-          console.log(err);
-          throw err;
+          console.log(err.code);
+          console.log(typeof err.code);
+          return callback(err.code);
 
+        } else {
+          console.log(q.sql);
+
+          exports.getCustomers(assignedID, function(result){
+
+            // handle falsey values
+            result[0].id_cust = result[0].id_cust || 0;
+            result[0].nm_cust = result[0].nm_cust || 0;
+            if(result[0].nm_cust == 0){
+              result[0].nm_cust = "0";
+            }
+            result[0].pin_cust = result[0].pin_cust || 0;
+            result[0].datecreated_cust = result[0].datecreated_cust || 0;
+            if(result[0].datecreated_cust == 0){
+              result[0].datecreated_cust = "0";
+            }
+            result[0].num_accounts_cust = result[0].num_accounts_cust || 0;
+            result[0].num_trans_cust = result[0].num_trans_cust || 0;
+
+            //let jsonStr = JSON.stringify(result);
+            //console.log("JJJJ " + jsonStr);
+            return callback(result);
+          });
         }
-
-        exports.getCustomers(assignedID, function(result){
-
-          // handle falsey values
-          result[0].id_cust = result[0].id_cust || 0;
-          result[0].nm_cust = result[0].nm_cust || 0;
-          if(result[0].nm_cust == 0){
-            result[0].nm_cust = "0";
-          }
-          result[0].pin_cust = result[0].pin_cust || 0;
-          result[0].datecreated_cust = result[0].datecreated_cust || 0;
-          if(result[0].datecreated_cust == 0){
-            result[0].datecreated_cust = "0";
-          }
-          result[0].num_accounts_cust = result[0].num_accounts_cust || 0;
-          result[0].num_trans_cust = result[0].num_trans_cust || 0;
-
-          //let jsonStr = JSON.stringify(result);
-          //console.log("JJJJ " + jsonStr);
-          return callback(result);
-        });
 
       });
 
@@ -94,16 +137,34 @@ exports.createCustomer = function(name, pin, date, num_acc, num_trans, callback)
       closeSQL(con);
     });
   });
+
+
 }
 
 exports.getCustomers = function(id, callback){
+
+  // <validate input paramter types>
+  var final_err_msg = "";
+
+  if (!(Number.isInteger(id))){
+    // pin input was not an integer, length can vary for future special codes.
+    final_err_msg = final_err_msg + "| Id input to API was not an valid number |";
+  }
+
+  if(final_err_msg.length != 0){
+    // means there are some errors in the inputs that were caught
+    throw final_err_msg;
+  }
+
+  // </validate input paramter types>
+
   const con = connectDBSQL();
 
   con.connect(function(err) {
     if (err){
       console.log("Error: getCustomers, could not connect to database.");
       console.log(err);
-      throw err;
+      return callback(err.code);
     }
     var sql_q = "SELECT * FROM customers";
     var sql_where = " WHERE ?? = ?";
@@ -122,7 +183,7 @@ exports.getCustomers = function(id, callback){
       if (err){
         console.log("Error: getCustomers select query.");
         console.log(err);
-        throw err;
+        return callback(err.code);
       }
 
       let i;
@@ -154,13 +215,49 @@ exports.getCustomers = function(id, callback){
 
 // "id_cust", "nm_cust", "pin_cust", "datecreated_cust", "num_accounts_cust", "num_trans_cust"
 exports.updateCustomer = function(id, name, pin, num_acc, num_trans, callback){
+
+  // <validate input paramter types>
+  var final_err_msg = "";
+
+  if (!(Number.isInteger(id))){
+    // pin input was not an integer, length can vary for future special codes.
+    final_err_msg = final_err_msg + "| Id input to API was not an valid number |";
+  }
+
+  if(typeof name !== 'object'){
+    // name input was not a string
+    final_err_msg = final_err_msg + "| Name input to API was not a string object |";
+  }
+
+  if (!(Number.isInteger(pin))){
+    // pin input was not an integer, length can vary for future special codes.
+    final_err_msg = final_err_msg + "| Pin input to API was not an valid number |";
+  }
+
+  if (!(Number.isInteger(num_acc))){
+    // pin input was not an integer, length can vary for future special codes.
+    final_err_msg = final_err_msg + "| Number of accounts input to API was not an valid number |";
+  }
+
+  if (!(Number.isInteger(num_trans))){
+    // pin input was not an integer, length can vary for future special codes.
+    final_err_msg = final_err_msg + "| Number of transactions input to API was not an valid number |";
+  }
+
+  if(final_err_msg.length != 0){
+    // means there are some errors in the inputs that were caught
+    throw final_err_msg;
+  }
+
+  // </validate input paramter types>
+
   const con = connectDBSQL();
 
   con.connect(function(err) {
     if (err){
       console.log("Error: updateCustomer, could not connect to database.");
       console.log(err);
-      throw err;
+      return callback(err.code);
     }
 
     // query update
@@ -180,7 +277,7 @@ exports.updateCustomer = function(id, name, pin, num_acc, num_trans, callback){
         console.log(q.sql);
         console.log("Error: updateCustomer query.");
         console.log(err);
-        throw err;
+        return callback(err.code);
       }
       return callback(result.affectedRows);
       //console.log(result);
@@ -193,13 +290,29 @@ exports.updateCustomer = function(id, name, pin, num_acc, num_trans, callback){
 }
 
 exports.removeCustomer = function(id, callback){
+
+  // <validate input paramter types>
+  var final_err_msg = "";
+
+  if (!(Number.isInteger(id))){
+    // pin input was not an integer, length can vary for future special codes.
+    final_err_msg = final_err_msg + "| Id input to API was not an valid number |";
+  }
+
+  if(final_err_msg.length != 0){
+    // means there are some errors in the inputs that were caught
+    throw final_err_msg;
+  }
+
+  // </validate input paramter types>
+
   const con = connectDBSQL();
 
   con.connect(function(err) {
     if (err){
       console.log("Error: removeCustomer, could not connect to database.");
       console.log(err);
-      throw err;
+      return callback(err.code);
     }
     console.log("log: removeCustomer: connected to DB.");
 
@@ -209,7 +322,7 @@ exports.removeCustomer = function(id, callback){
       if (err){
         console.log("Error: removeCustomer delete query.");
         console.log(err);
-        throw err;
+        return callback(err.code);
       }
       return callback(result.affectedRows);
       //console.log(result);
@@ -220,6 +333,22 @@ exports.removeCustomer = function(id, callback){
 }
 
 exports.getAllAccounts = function(id, callback){
+
+  // <validate input paramter types>
+  var final_err_msg = "";
+
+  if (!(Number.isInteger(id))){
+    // pin input was not an integer, length can vary for future special codes.
+    final_err_msg = final_err_msg + "| Id input to API was not an valid number |";
+  }
+
+  if(final_err_msg.length != 0){
+    // means there are some errors in the inputs that were caught
+    throw final_err_msg;
+  }
+
+  // </validate input paramter types>
+
   const con = connectDBSQL();
 
   //console.log("id = " + i_id + ". sql for select: " + sql_q);
@@ -229,7 +358,7 @@ exports.getAllAccounts = function(id, callback){
     if (err){
       console.log("Error: getAllAccounts, could not connect to database.");
       console.log(err);
-      throw err;
+      return callback(err.code);
     }
 
     var sql_q = "SELECT * FROM accounts";
@@ -246,7 +375,7 @@ exports.getAllAccounts = function(id, callback){
       if (err){
         console.log("Error: getAllAccounts select query.");
         console.log(err);
-        throw err;
+        return callback(err.code);
       }
       return callback(result);
       //console.log(result);
@@ -257,6 +386,22 @@ exports.getAllAccounts = function(id, callback){
 }
 
 exports.getCustAccounts = function(ownerID, callback){
+
+  // <validate input paramter types>
+  var final_err_msg = "";
+
+  if (!(Number.isInteger(ownerID))){
+    // pin input was not an integer, length can vary for future special codes.
+    final_err_msg = final_err_msg + "| Owner id input to API was not an valid number |";
+  }
+
+  if(final_err_msg.length != 0){
+    // means there are some errors in the inputs that were caught
+    throw final_err_msg;
+  }
+
+  // </validate input paramter types>
+
   const con = connectDBSQL();
 
   //console.log("id = " + i_id + ". sql for select: " + sql_q);
@@ -266,7 +411,7 @@ exports.getCustAccounts = function(ownerID, callback){
     if (err){
       console.log("Error: getCustAccounts, could not connect to database.");
       console.log(err);
-      throw err;
+      return callback(err.code);
     }
 
     var sql_q = "SELECT * FROM accounts";
@@ -283,7 +428,7 @@ exports.getCustAccounts = function(ownerID, callback){
       if (err){
         console.log("Error: getCustAccounts select query.");
         console.log(err);
-        throw err;
+        return callback(err.code);
       }
       return callback(result);
       //console.log(result);
@@ -294,13 +439,39 @@ exports.getCustAccounts = function(ownerID, callback){
 }
 
 exports.updateAccount = function(ownerID, accID, tot_AMT, callback){
+
+  // <validate input paramter types>
+  var final_err_msg = "";
+
+  if (!(Number.isInteger(ownerID))){
+    // pin input was not an integer, length can vary for future special codes.
+    final_err_msg = final_err_msg + "| Owner id input to API was not an valid number |";
+  }
+
+  if (!(Number.isInteger(accID))){
+    // pin input was not an integer, length can vary for future special codes.
+    final_err_msg = final_err_msg + "| Account id input to API was not an valid number |";
+  }
+
+  if (!(Number.isInteger(tot_AMT))){
+    // pin input was not an integer, length can vary for future special codes.
+    final_err_msg = final_err_msg + "| Amount total input to API was not an valid number |";
+  }
+
+  if(final_err_msg.length != 0){
+    // means there are some errors in the inputs that were caught
+    throw final_err_msg;
+  }
+
+  // </validate input paramter types>
+
   const con = connectDBSQL();
 
   con.connect(function(err) {
     if (err){
       console.log("Error: updateAccount, could not connect to database.");
       console.log(err);
-      throw err;
+      return callback(err.code);
     }
 
     // query update
@@ -317,7 +488,7 @@ exports.updateAccount = function(ownerID, accID, tot_AMT, callback){
       if (err){
         console.log("Error: updateAccount query.");
         console.log(err);
-        throw err;
+        return callback(err.code);
       }
       return callback(result.affectedRows);
       //console.log(result);
@@ -330,6 +501,21 @@ exports.updateAccount = function(ownerID, accID, tot_AMT, callback){
 }
 
 exports.removeAccount = function(id, callback){
+
+  // <validate input paramter types>
+  var final_err_msg = "";
+
+  if (!(Number.isInteger(id))){
+    // pin input was not an integer, length can vary for future special codes.
+    final_err_msg = final_err_msg + "| Id input to API was not an valid number |";
+  }
+
+  if(final_err_msg.length != 0){
+    // means there are some errors in the inputs that were caught
+    throw final_err_msg;
+  }
+
+  // </validate input paramter types>
   const con = connectDBSQL();
 
   //console.log("acc id passed: " + id);
@@ -337,7 +523,7 @@ exports.removeAccount = function(id, callback){
     if (err){
       console.log("Error: removeAccount, could not connect to database.");
       console.log(err);
-      throw err;
+      return callback(err.code);
     }
     console.log("log: removeAccount: connected to DB.");
 
@@ -348,7 +534,7 @@ exports.removeAccount = function(id, callback){
       if (err){
         console.log("Error: removeAccount delete query.");
         console.log(err);
-        throw err;
+        return callback(err.code);
       }
       return callback(result.affectedRows);
       //console.log(result);
@@ -359,13 +545,39 @@ exports.removeAccount = function(id, callback){
 }
 
 exports.createAccount = function(owner_id, datecr_acc, accountAmt, callback){
+
+  // <validate input paramter types>
+  var final_err_msg = "";
+
+  if (!(Number.isInteger(owner_id))){
+    // pin input was not an integer, length can vary for future special codes.
+    final_err_msg = final_err_msg + "| Owner id input to API was not an valid number |";
+  }
+
+  if(typeof datecr_acc !== 'object'){
+    // name input was not a string
+    final_err_msg = final_err_msg + "| Date input to API was not a string object |";
+  }
+
+  if (!(Number.isInteger(accountAmt))){
+    // pin input was not an integer, length can vary for future special codes.
+    final_err_msg = final_err_msg + "| Account amount input to API was not an valid number |";
+  }
+
+  if(final_err_msg.length != 0){
+    // means there are some errors in the inputs that were caught
+    throw final_err_msg;
+  }
+
+  // </validate input paramter types>
+
   const con = connectDBSQL();
 
   con.connect(function(err) {
     if (err){
       console.log("Error: createAccount, could not connect to database.");
       console.log(err);
-      throw err;
+      return callback(err.code);
     }
     console.log("log: createAccount: connected to DB.");
     //
@@ -374,7 +586,7 @@ exports.createAccount = function(owner_id, datecr_acc, accountAmt, callback){
       if (err){
         console.log("Error: createAccount select account ID query");
         console.log(err);
-        throw err;
+        return callback(err.code);
       }
       let max = 0;
       rows.forEach(function(row) {
@@ -399,7 +611,7 @@ exports.createAccount = function(owner_id, datecr_acc, accountAmt, callback){
           console.log(q.sql);
           console.log("Error: createAccount insert query");
           console.log(err);
-          throw err;
+          return callback(err.code);
         }
 
         exports.getAllAccounts(assignedID, function(result){

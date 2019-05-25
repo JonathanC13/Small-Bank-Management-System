@@ -42,6 +42,15 @@ function isEmpty(obj) {
     return true;
 }
 
+function IsJsonString(str) {
+    try {
+        JSON.parse(str);
+    } catch (e) {
+        return false;
+    }
+    return true;
+}
+
 const dgram = require('dgram');
 const server = dgram.createSocket('udp4');  // Open socket for udp transfers
 //const client = dgram.createSocket('udp4');
@@ -81,6 +90,7 @@ server.on('message', (msg, rinfo) => {
     // if no end of information char found, then the information fills the whole segment
     s_name = s_name_seg;
   }
+  //s_name = s_name.join('');
   //console.log("NAME: " + s_name);
   // </Extract customer name>
 
@@ -115,6 +125,7 @@ server.on('message', (msg, rinfo) => {
   } else {
     s_date = s_date_seg;
   }
+  //s_date = s_date.join('');
   //console.log("DATE: " + s_date);
   // </Extract customer creation date>
 
@@ -237,7 +248,8 @@ server.on('message', (msg, rinfo) => {
       impl_API.createCustomer(s_name, i_PIN, s_date, i_num_acc, i_num_trans, function(result){
 
         var stuff_i_want = result;  // json obj
-
+        console.log("TYPE");
+        console.log(typeof stuff_i_want);
         if(isEmpty(stuff_i_want)){
           // empty JSON, so create JSON with success code = 2
           //let resp_empty = '{"success":2}';
@@ -248,8 +260,9 @@ server.on('message', (msg, rinfo) => {
           server.send(message, rinfo.port, rinfo.address, (err) => {
             // sending to client
           });
-        } else {
-          // not empty
+        } else if (typeof stuff_i_want === 'object'){
+
+          // not empty and a json
 
           // add success status
           //let resp_success = '{\"success\": 1}';
@@ -267,19 +280,29 @@ server.on('message', (msg, rinfo) => {
           server.send(message, rinfo.port, rinfo.address, (err) => {
             // sending to client
           });
+        } else {
+          // send error code indicating API error
+          let s_e = stuff_i_want.toString();
+          let resp_error = "00API error:" + s_e;
+          console.log(resp_error);
+          const message = Buffer.from(resp_error);
+          server.send(message, rinfo.port, rinfo.address, (err) => {
+            // sending to client
+          });
         }
 
       });
-
     } catch (e){
       // send error code indicating API error
       let s_e = e.toString();
-      let resp_error = "00" + s_e;
+      let resp_error = "00API error:" + s_e;
+      console.log(resp_error);
       const message = Buffer.from(resp_error);
       server.send(message, rinfo.port, rinfo.address, (err) => {
         // sending to client
       });
     }
+
 
   }
   else if(i_cmd == 2){
@@ -296,7 +319,7 @@ server.on('message', (msg, rinfo) => {
           server.send(message, rinfo.port, rinfo.address, (err) => {
             // sending to client
           });
-        } else {
+        } else if (typeof stuff_i_want === 'object'){
           //let resp_success = '{\"success\": 1}';
           //var json_resp = JSON.parse(resp_success);
           //stuff_i_want.unshift(json_resp);
@@ -316,12 +339,20 @@ server.on('message', (msg, rinfo) => {
 
             //server.close();
           });
+        } else {
+          // send error code indicating API error
+          let s_e = stuff_i_want.toString();
+          let resp_error = "00API error:" + s_e;
+          const message = Buffer.from(resp_error);
+          server.send(message, rinfo.port, rinfo.address, (err) => {
+            // sending to client
+          });
         }
       });
     } catch (e){
       // send error code indicating API error
       let s_e = e.toString();
-      let resp_error = "00" + s_e;
+      let resp_error = "00API error:" + s_e;
       const message = Buffer.from(resp_error);
       server.send(message, rinfo.port, rinfo.address, (err) => {
         // sending to client
@@ -331,6 +362,7 @@ server.on('message', (msg, rinfo) => {
   }
   else if(i_cmd == 3){
     // request command: select customer
+
     try {
       impl_API.getCustomers(i_ID, function(result){
         var stuff_i_want = result;  // json obj
@@ -343,7 +375,7 @@ server.on('message', (msg, rinfo) => {
           server.send(message, rinfo.port, rinfo.address, (err) => {
             // sending to client
           });
-        } else {
+        } else if (typeof stuff_i_want === 'object'){
 
           //let resp_success = '{\"success\": 1}';
           //var json_resp = JSON.parse(resp_success);
@@ -363,74 +395,107 @@ server.on('message', (msg, rinfo) => {
 
             //server.close();
           });
+        } else {
+          let s_e = stuff_i_want.toString();
+          let resp_error = "00API error:" + s_e;
+          const message = Buffer.from(resp_error);
+          server.send(message, rinfo.port, rinfo.address, (err) => {
+            // sending to client
+          });
         }
       });
-
-    } catch(e){
-      // send error code indicating API error
+    } catch (e){
       let s_e = e.toString();
-      let resp_error = "00" + s_e;
+      let resp_error = "00API error:" + s_e;
       const message = Buffer.from(resp_error);
       server.send(message, rinfo.port, rinfo.address, (err) => {
         // sending to client
       });
     }
+
   }
   else if(i_cmd == 4){
     // update a customer row
     try {
       impl_API.updateCustomer(i_ID, s_name, i_PIN, i_num_acc, i_num_trans, function(result){
-        var stuff_i_want = parseInt(result, 10);  // json obj
-        //let resp_success = '[{\"success\": 3}, {\"affectedRows\":' + stuff_i_want + '}]';
-        let jsonStr = "03" + stuff_i_want;
-        console.log(jsonStr);
+        var stuff_i_want = result;
+        var i_stuff = parseInt(result, 10);  // json obj
 
-        const message = Buffer.from(jsonStr);
-        server.send(message, rinfo.port, rinfo.address, (err) => {
-          //console.log(rinfo.address);
-          //console.log(rinfo.port);
-          //console.log(message);
+        if (Number.isInteger(i_stuff)){
+          //let resp_success = '[{\"success\": 3}, {\"affectedRows\":' + stuff_i_want + '}]';
+          let jsonStr = "03" + i_stuff;
+          console.log(jsonStr);
 
-          //server.close();
-        });
+          const message = Buffer.from(jsonStr);
+          server.send(message, rinfo.port, rinfo.address, (err) => {
+            //console.log(rinfo.address);
+            //console.log(rinfo.port);
+            //console.log(message);
+
+            //server.close();
+          });
+        } else {
+          // send error code indicating API error
+          let s_e = stuff_i_want.toString();
+          let resp_error = "00API error:" + s_e;
+          const message = Buffer.from(resp_error);
+          server.send(message, rinfo.port, rinfo.address, (err) => {
+            // sending to client
+          });
+        }
       });
     } catch (e){
       // send error code indicating API error
       let s_e = e.toString();
-      let resp_error = "00" + s_e;
-      const message = Buffer.from(jsonStr);
-      server.send(message, rinfo.port, rinfo.address, (err) => {
-        // sending to client
-      });
-    }
-  } else if(i_cmd == 5){
-    // request command: remove customer
-    try {
-      impl_API.removeCustomer(i_ID, function(result){
-        var stuff_i_want = parseInt(result, 10);;  // int
-        //let resp_success = '[{\"success\": 3}, {\"affectedRows\":' + stuff_i_want + '}]';
-        let jsonStr = "03" + stuff_i_want;
-
-        console.log(jsonStr);
-
-        const message = Buffer.from(jsonStr);
-        server.send(message, rinfo.port, rinfo.address, (err) => {
-          //console.log(rinfo.address);
-          //console.log(rinfo.port);
-          //console.log(message);
-
-          //server.close();
-        });
-      });
-    } catch (e){
-      // send error code indicating API error
-      let s_e = e.toString();
-      let resp_error = "00" + s_e;
+      let resp_error = "00API error:" + s_e;
       const message = Buffer.from(resp_error);
       server.send(message, rinfo.port, rinfo.address, (err) => {
         // sending to client
       });
     }
+
+
+  } else if(i_cmd == 5){
+    // request command: remove customer
+    try {
+      impl_API.removeCustomer(i_ID, function(result){
+        var stuff_i_want = result;
+        var i_stuff = parseInt(result, 10);  // json obj
+
+        if (Number.isInteger(i_stuff)){
+        //let resp_success = '[{\"success\": 3}, {\"affectedRows\":' + stuff_i_want + '}]';
+          let jsonStr = "03" + i_stuff;
+
+          console.log(jsonStr);
+
+          const message = Buffer.from(jsonStr);
+          server.send(message, rinfo.port, rinfo.address, (err) => {
+            //console.log(rinfo.address);
+            //console.log(rinfo.port);
+            //console.log(message);
+
+            //server.close();
+          });
+        } else {
+          // send error code indicating API error
+          let s_e = stuff_i_want.toString();
+          let resp_error = "00API error:" + s_e;
+          const message = Buffer.from(resp_error);
+          server.send(message, rinfo.port, rinfo.address, (err) => {
+            // sending to client
+          });
+        }
+      });
+    } catch (e) {
+      // send error code indicating API error
+      let s_e = e.toString();
+      let resp_error = "00API error:" + s_e;
+      const message = Buffer.from(resp_error);
+      server.send(message, rinfo.port, rinfo.address, (err) => {
+        // sending to client
+      });
+    }
+
   } else if(i_cmd == 6){
     // request command: get all accounts (-2) or to specific account ID (sent through i_SRC segment)
     try {
@@ -439,32 +504,51 @@ server.on('message', (msg, rinfo) => {
         //let resp_success = '{\"success\": 1}';
         //var json_resp = JSON.parse(resp_success);
         //stuff_i_want.unshift(json_resp);
-        console.log(stuff_i_want);
+        if(isEmpty(stuff_i_want)){
+          // empty JSON, so create JSON with success code = 2
+          //let resp_empty = '{"success":2}';
+          let resp_empty = "02";
+          const message = Buffer.from(resp_empty);
+          server.send(message, rinfo.port, rinfo.address, (err) => {
+            // sending to client
+          });
+        } else if (typeof stuff_i_want === 'object'){
+          console.log(stuff_i_want);
 
-        // convert JSON to string
-        let jsonStr = "01" + JSON.stringify(stuff_i_want);
-        console.log("SocketLog: view all customer JSON = " + jsonStr);
-        // send response
-        //const message = Buffer.from('Some bytes');
-        const message = Buffer.from(jsonStr);
-        server.send(message, rinfo.port, rinfo.address, (err) => {
-          //console.log(rinfo.address);
-          //console.log(rinfo.port);
-          //console.log(message);
+          // convert JSON to string
+          let jsonStr = "01" + JSON.stringify(stuff_i_want);
+          console.log("SocketLog: view all customer JSON = " + jsonStr);
+          // send response
+          //const message = Buffer.from('Some bytes');
+          const message = Buffer.from(jsonStr);
+          server.send(message, rinfo.port, rinfo.address, (err) => {
+            //console.log(rinfo.address);
+            //console.log(rinfo.port);
+            //console.log(message);
 
-          //server.close();
-        });
+            //server.close();
+          });
+        } else {
+          // send error code indicating API error
+          let s_e = stuff_i_want.toString();
+          let resp_error = "00API error:" + s_e;
+          const message = Buffer.from(resp_error);
+          server.send(message, rinfo.port, rinfo.address, (err) => {
+            // sending to client
+          });
+        }
 
       });
-    } catch (e) {
+    } catch (e){
       // send error code indicating API error
       let s_e = e.toString();
-      let resp_error = "00" + s_e;
+      let resp_error = "00API error:" + s_e;
       const message = Buffer.from(resp_error);
       server.send(message, rinfo.port, rinfo.address, (err) => {
         // sending to client
       });
     }
+
   } else if(i_cmd == 7){
     // request command: get all accounts associated to owner ID
     try {
@@ -474,86 +558,126 @@ server.on('message', (msg, rinfo) => {
         //var json_resp = JSON.parse(resp_success);
         //stuff_i_want.unshift(json_resp);
         console.log(stuff_i_want);
+        if(isEmpty(stuff_i_want)){
+          // empty JSON, so create JSON with success code = 2
+          //let resp_empty = '{"success":2}';
+          let resp_empty = "02";
+          const message = Buffer.from(resp_empty);
+          server.send(message, rinfo.port, rinfo.address, (err) => {
+            // sending to client
+          });
+        } else if (typeof stuff_i_want === 'object'){
+          // convert JSON to string
+          let jsonStr = "01" + JSON.stringify(stuff_i_want);
+          console.log("SocketLog: view all customer JSON = " + jsonStr);
+          // send response
+          //const message = Buffer.from('Some bytes');
+          const message = Buffer.from(jsonStr);
+          server.send(message, rinfo.port, rinfo.address, (err) => {
+            //console.log(rinfo.address);
+            //console.log(rinfo.port);
+            //console.log(message);
 
-        // convert JSON to string
-        let jsonStr = "01" + JSON.stringify(stuff_i_want);
-        console.log("SocketLog: view all customer JSON = " + jsonStr);
-        // send response
-        //const message = Buffer.from('Some bytes');
-        const message = Buffer.from(jsonStr);
-        server.send(message, rinfo.port, rinfo.address, (err) => {
-          //console.log(rinfo.address);
-          //console.log(rinfo.port);
-          //console.log(message);
-
-          //server.close();
-        });
-
+            //server.close();
+          });
+        } else {
+          // send error code indicating API error
+          let s_e = stuff_i_want.toString();
+          let resp_error = "00API error:" + s_e;
+          const message = Buffer.from(resp_error);
+          server.send(message, rinfo.port, rinfo.address, (err) => {
+            // sending to client
+          });
+        }
       });
     } catch (e){
       // send error code indicating API error
       let s_e = e.toString();
-      let resp_error = "00" + s_e;
+      let resp_error = "00API error:" + s_e;
       const message = Buffer.from(resp_error);
       server.send(message, rinfo.port, rinfo.address, (err) => {
         // sending to client
       });
     }
+
   } else if(i_cmd == 8){
     // request command: update account
     try {
       impl_API.updateAccount(i_ownerID, i_accID, i_accAMT, function(result){
-        var stuff_i_want = parseInt(result, 10);;  // json obj
-        //let resp_success = '[{\"success\": 3}, {\"affectedRows\":' + stuff_i_want + '}]';
-        let jsonStr = "03" + stuff_i_want;
-        console.log(jsonStr);
+        var stuff_i_want = result;
+        var i_stuff = parseInt(result, 10);  // json obj
 
-        const message = Buffer.from(jsonStr);
-        server.send(message, rinfo.port, rinfo.address, (err) => {
-          //console.log(rinfo.address);
-          //console.log(rinfo.port);
-          //console.log(message);
+        if (Number.isInteger(i_stuff)){
+          console.log(i_stuff);
+          let jsonStr = "03" + i_stuff;
+          const message = Buffer.from(jsonStr);
+          server.send(message, rinfo.port, rinfo.address, (err) => {
+            //console.log(rinfo.address);
+            //console.log(rinfo.port);
+            //console.log(message);
 
-          //server.close();
-        });
+            //server.close();
+          });
+        } else {
+          // send error code indicating API error
+          let s_e = stuff_i_want.toString();
+          let resp_error = "00API error:" + s_e;
+          const message = Buffer.from(resp_error);
+          server.send(message, rinfo.port, rinfo.address, (err) => {
+            // sending to client
+          });
+        }
       });
     } catch (e){
       // send error code indicating API error
       let s_e = e.toString();
-      let resp_error = "00" + s_e;
+      let resp_error = "00API error:" + s_e;
       const message = Buffer.from(resp_error);
       server.send(message, rinfo.port, rinfo.address, (err) => {
         // sending to client
       });
     }
+
   } else if(i_cmd == 9){
 
     // request command: remove specific account
     try {
       impl_API.removeAccount(i_accID, function(result){
-        var stuff_i_want = parseInt(result, 10);;  // json obj
-        //let resp_success = '[{\"success\": 3}, {\"affectedRows\":' + stuff_i_want + '}]';
-        let jsonStr = "03" + stuff_i_want;
-        console.log(jsonStr);
+        var stuff_i_want = result;
+        var i_stuff = parseInt(result, 10);  // json obj
 
-        const message = Buffer.from(jsonStr);
-        server.send(message, rinfo.port, rinfo.address, (err) => {
-          //console.log(rinfo.address);
-          //console.log(rinfo.port);
-          //console.log(message);
+        if (Number.isInteger(i_stuff)){
+          let jsonStr = "03" + stuff_i_want;
+          console.log(jsonStr);
 
-          //server.close();
-        });
+          const message = Buffer.from(jsonStr);
+          server.send(message, rinfo.port, rinfo.address, (err) => {
+            //console.log(rinfo.address);
+            //console.log(rinfo.port);
+            //console.log(message);
+
+            //server.close();
+          });
+        } else {
+          // send error code indicating API error
+          let s_e = stuff_i_want.toString();
+          let resp_error = "00API error:" + s_e;
+          const message = Buffer.from(resp_error);
+          server.send(message, rinfo.port, rinfo.address, (err) => {
+            // sending to client
+          });
+        }
       });
     } catch (e){
       // send error code indicating API error
       let s_e = e.toString();
-      let resp_error = "00" + s_e;
+      let resp_error = "00API error:" + s_e;
       const message = Buffer.from(resp_error);
       server.send(message, rinfo.port, rinfo.address, (err) => {
         // sending to client
       });
     }
+
   } else if(i_cmd == 10){
     // request command: Create account
     try {
@@ -563,21 +687,40 @@ server.on('message', (msg, rinfo) => {
         //var json_resp = JSON.parse(resp_success);
         //stuff_i_want.unshift(json_resp);
         console.log(stuff_i_want);
+        if(isEmpty(stuff_i_want)){
+          // empty JSON, so create JSON with success code = 2
+          //let resp_empty = '{"success":2}';
+          let resp_empty = "02";
+          const message = Buffer.from(resp_empty);
+          server.send(message, rinfo.port, rinfo.address, (err) => {
+            // sending to client
+          });
+        } else if (typeof stuff_i_want === 'object'){
 
-        // convert JSON to string
-        let jsonStr = "01" + JSON.stringify(stuff_i_want);
-        console.log("SocketLog: create customer JSON = " + jsonStr);
-        // send response
-        //const message = Buffer.from('Some bytes');
-        const message = Buffer.from(jsonStr);
-        server.send(message, rinfo.port, rinfo.address, (err) => {
-          // sending to client
-        });
+          // convert JSON to string
+          let jsonStr = "01" + JSON.stringify(stuff_i_want);
+          console.log("SocketLog: create customer JSON = " + jsonStr);
+          // send response
+          //const message = Buffer.from('Some bytes');
+          const message = Buffer.from(jsonStr);
+          server.send(message, rinfo.port, rinfo.address, (err) => {
+            // sending to client
+          });
+        } else {
+
+          // send error code indicating API error
+          let s_e = stuff_i_want.toString();
+          let resp_error = "00API error:" + s_e;
+          const message = Buffer.from(resp_error);
+          server.send(message, rinfo.port, rinfo.address, (err) => {
+            // sending to client
+          });
+        }
       });
     } catch (e){
       // send error code indicating API error
       let s_e = e.toString();
-      let resp_error = "00" + s_e;
+      let resp_error = "00API error:" + s_e;
       const message = Buffer.from(resp_error);
       server.send(message, rinfo.port, rinfo.address, (err) => {
         // sending to client
