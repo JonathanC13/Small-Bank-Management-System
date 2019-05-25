@@ -365,16 +365,19 @@ string BankManagementSystemUDP_controller::createUDPPacket(int reqCmd, BankManag
 	string returnedJSON = send_rec_Msg(s_fullPack);
 	//cout << "rec string: " << returnedJSON << endl;
 
-	char b_respCODE[CMD_SIZE]; // size 2
+	/*
+	char b_respCODE[CMD_SIZE];
 	std::fill_n(b_respCODE, CMD_SIZE, '0');
 	for(int i = 0; i < CMD_SIZE; i ++){
 		b_respCODE[i] = returnedJSON[i];
 
 	}
-	//cout << "code raw: " << b_respCODE << endl;
+	*/
+	string b_respCODE = returnedJSON.substr(0, CMD_SIZE);
+	cout << "code raw: " << b_respCODE << endl;
 
 	int resp_code = std::stoi(b_respCODE);
-	//cout << "code int: " << resp_code << endl;
+	cout << "code int: " << resp_code << endl;
 
 	switch(resp_code)
 	{

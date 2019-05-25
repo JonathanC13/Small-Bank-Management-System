@@ -172,7 +172,8 @@ void BankManagementSystem_Controller::createCustomer_contr()
 
 int BankManagementSystem_Controller::inputValidPIN()
 {
-	int createPIN;
+
+	int createPIN = -2;
 	while(1)
 	{
 		view.printCustomerCreation_PIN();
@@ -407,15 +408,15 @@ BankManagementSystem_Model::st_customer BankManagementSystem_Controller::updateC
 			continue;
 		}
 
-		if(selectOp < 1 || selectOp > 3)
+		if(selectOp < 1 || selectOp > 4)
 		{
-			cout << "Please enter a value 1 to 3" << endl;
+			cout << "Please enter a value 1 to 4" << endl;
 			continue;
 		}
 
 		if(selectOp == 3)
 		{
-			// on exit commit to DB - even if no changes.
+			// save and exit. commit to DB - even if no changes and this option chosen
 
 			// sel_cust is given to be parsed into a packet to update the selected customer
 			string retJSON = UDP_contr.createUDPPacket(4, sel_custcurr, placeholder_acc, 0, 0, 0);
@@ -433,6 +434,10 @@ BankManagementSystem_Model::st_customer BankManagementSystem_Controller::updateC
 				std::vector<BankManagementSystem_Model::st_customer> viewingCustomers = model.getAllCustomers(retJSON_sel);
 				sel_custcurr = viewingCustomers[0];
 			}
+			break;
+		}
+
+		if(selectOp == 4){
 			break;
 		}
 
@@ -456,25 +461,28 @@ BankManagementSystem_Model::st_customer BankManagementSystem_Controller::updateC
 						cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 						continue;
 					} else {
+						// not fail
 						if(pickName == "-1"){
 							break;
+						} else {
+							sel_custcurr.Name = pickName;
 						}
 					}
 					break;
 				}
-				//model.modName(sel_custcurr, pickName);
-				sel_custcurr.Name = pickName;
 				break;
 			case 2:
 				// modify PIN
 
 				pickPIN = inputValidPIN();
 				//model.modPIN(sel_custcurr, pickPIN);
-				sel_custcurr.PIN = pickPIN;
+				if(pickPIN != -2){
+					sel_custcurr.PIN = pickPIN;
+				}
 				break;
 
 			default:
-				cout << "Please enter a value 1 to 3" << endl;
+				cout << "Please enter a value 1 to 4" << endl;
 				break;
 
 		}
@@ -698,6 +706,7 @@ BankManagementSystem_Model::st_account BankManagementSystem_Controller::selected
 	int sel_op = 0;
 	BankManagementSystem_Model::st_account sel_acccurr = selAcc;
 	BankManagementSystem_Model::st_customer null_cust;
+	int prevOwner = selAcc.ownerID;
 	while(1)
 	{
 		view.printAccountsInfo(sel_acccurr);
@@ -719,8 +728,9 @@ BankManagementSystem_Model::st_account BankManagementSystem_Controller::selected
 			continue;
 		}
 
-		if(sel_op < 1 || sel_op > 3)
+		if(sel_op < 1 || sel_op > 4)
 		{
+			cout << "Please enter an option from 1 to 4." << endl;
 			continue;
 		}
 
@@ -729,6 +739,58 @@ BankManagementSystem_Model::st_account BankManagementSystem_Controller::selected
 		{
 			// update
 			string retJSON = UDP_contr.createUDPPacket(8, null_cust, sel_acccurr, 0, 0, 0);
+
+			null_cust.ID = prevOwner;
+			// <get the prev customer row, update it, and then send back>
+			string retJSON_prev = UDP_contr.createUDPPacket(3, null_cust, sel_acccurr, 0, 0, 0);
+			// parse the JSON
+			std::vector<BankManagementSystem_Model::st_customer> prevOwnerCust = model.getAllCustomers(retJSON_prev);
+			BankManagementSystem_Model::st_customer selectedCust = prevOwnerCust[0];
+			if(selectedCust.num_acc > 0){
+				selectedCust.num_acc = selectedCust.num_acc - 1;
+			} else {
+				cout << "This customer, id = " << prevOwner << ", had a number of accounts = " << selectedCust.num_acc << ". Therefore, changing to 0 to normalize."<< endl;
+				selectedCust.num_acc = 0;
+			}
+			// update prev owner
+			string retJSON_upPrev = UDP_contr.createUDPPacket(4, selectedCust, sel_acccurr, 0, 0, 0);
+			//cout << "update: " << retJSON << endl;
+
+			if(retJSON_upPrev.compare(0,1,"1") == 0)
+			{
+				// rows affected = 1, therefore assume the desired customer row was updated.
+				cout << "Previous owner of account updated!" << endl;
+			} else {
+				cout << "Previous owner of account could NOT be updated due to some error. See if one was returned." << endl;
+			}
+
+			// <update new owner>
+			null_cust.ID = sel_acccurr.ownerID;
+			string retJSON_new = UDP_contr.createUDPPacket(3, null_cust, sel_acccurr, 0, 0, 0);
+			// parse the JSON
+			std::vector<BankManagementSystem_Model::st_customer> newOwnerCust = model.getAllCustomers(retJSON_new);
+			BankManagementSystem_Model::st_customer selectedCust_new = newOwnerCust[0];
+			if(selectedCust_new.num_acc >= 0){
+				selectedCust_new.num_acc = selectedCust.num_acc + 1;
+			} else {
+				cout << "This customer, id = " << prevOwner << ", had a number of accounts = " << selectedCust_new.num_acc << ". Therefore, changing to 1 to normalize."<< endl;
+				selectedCust_new.num_acc = 1;
+			}
+			// update new owner
+			string retJSON_upNew = UDP_contr.createUDPPacket(4, selectedCust_new, sel_acccurr, 0, 0, 0);
+			//cout << "update: " << retJSON << endl;
+
+			if(retJSON_upNew.compare(0,1,"1") == 0)
+			{
+				// rows affected = 1, therefore assume the desired customer row was updated.
+				cout << "New owner of account updated!" << endl;
+			} else {
+				cout << "New owner of account could NOT be updated due to some error. See if one was returned." << endl;
+			}
+
+			break;
+		}
+		if(sel_op == 4){
 			break;
 		}
 
@@ -752,38 +814,41 @@ BankManagementSystem_Model::st_account BankManagementSystem_Controller::selected
 						cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 						continue;
 					} else {
+						// valid int, but now check if new owner exists
+						if(newOwner == -1){
+							break;
+						} else {
+
+							// check if valid new owner
+							BankManagementSystem_Model::st_customer sel_cust;
+							sel_cust.ID = newOwner;
+							// request search of customer with the ID
+							string retJSON = UDP_contr.createUDPPacket(3, sel_cust, sel_acccurr, 0, 0, 0);
+
+							// parse the JSON
+							std::vector<BankManagementSystem_Model::st_customer> viewingCustomers = model.getAllCustomers(retJSON);
+							BankManagementSystem_Model::st_customer selectedCust = viewingCustomers[0];
+
+							// check if found
+							if(selectedCust.ID != -1)
+							{
+								// if ID not -1, then it was found in the DB and returned
+								//set the new ownerID
+								cout << "newOwner: " << newOwner << endl;
+								sel_acccurr.ownerID = newOwner;
+
+							} else {
+								cout << "Account with ID: " << newOwner << " does not exist." << endl;
+							}
+
+
+							break;
+						}
 						break;
 					}
 				}
-				if(newOwner == -1){
-					break;
-				} else {
+				break;
 
-					// check if valid new owner
-					BankManagementSystem_Model::st_customer sel_cust;
-					sel_cust.ID = newOwner;
-					// request search of customer with the ID
-					string retJSON = UDP_contr.createUDPPacket(3, sel_cust, sel_acccurr, 0, 0, 0);
-
-					// parse the JSON
-					std::vector<BankManagementSystem_Model::st_customer> viewingCustomers = model.getAllCustomers(retJSON);
-					BankManagementSystem_Model::st_customer selectedCust = viewingCustomers[0];
-
-					// check if found
-					if(selectedCust.ID != -1)
-					{
-						// if ID not -1, then it was found in the DB and returned
-						//set the new ownerID
-						cout << "newOwner: " << newOwner << endl;
-						sel_acccurr.ownerID = newOwner;
-
-					} else {
-						cout << "Account with ID: " << newOwner << " does not exist." << endl;
-					}
-
-
-					break;
-				}
 			case 2:
 				//2. change amount
 				double newAmt;
@@ -821,7 +886,7 @@ BankManagementSystem_Model::st_account BankManagementSystem_Controller::selected
 				}
 
 			default:
-				cout << "Please enter a value 0 to 3" << endl;
+				cout << "Please enter a value 0 to 4" << endl;
 				break;
 		}
 	}
@@ -936,6 +1001,7 @@ void BankManagementSystem_Controller::transfer(int type, int custID)
 {
 	BankManagementSystem_Model::st_customer custTrans;
 
+	// get source account, if exists
 	BankManagementSystem_Model::st_account SRC_acc;
 	while(1){
 		view.printInterTransfersFROM();
@@ -964,6 +1030,7 @@ void BankManagementSystem_Controller::transfer(int type, int custID)
 		}
 	}
 
+	// get dest account, if exists
 	BankManagementSystem_Model::st_account DEST_acc;
 	while(1){
 		view.printInterTransfersTO();
@@ -1030,21 +1097,46 @@ void BankManagementSystem_Controller::transfer(int type, int custID)
 	cout << "SRC: " << SRC_acc.tot_amount << "-" << selectAmt << endl;
 	SRC_acc.tot_amount = SRC_acc.tot_amount - selectAmt;
 	cout << "SRC total: " << SRC_acc.tot_amount << endl;
+
+	// update the source account
 	string retJSON_upSRC = UDP_contr.createUDPPacket(8, up_cust, SRC_acc, 0, 0, 0);
 	if(retJSON_upSRC.compare(0,1,"1") == 0)
 	{
 		cout << "Account updated!" << endl;
 
-		// update customer's number of transaction if they exist
+		// update customer's number of transaction only if they exist
 		up_cust.ID = SRC_acc.ownerID;
 		// select customer row
 		string retJSON_custSRC = UDP_contr.createUDPPacket(3, up_cust, SRC_acc, 0, 0, 0);
 		std::vector<BankManagementSystem_Model::st_customer> updCustSRC = model.getAllCustomers(retJSON_custSRC);
 		up_cust = updCustSRC[0];
-		up_cust.num_trans = up_cust.num_trans + 1;
-
-		string retJSON_updcustSRC = UDP_contr.createUDPPacket(4, up_cust, SRC_acc, 0, 0, 0);
-
+		// check if found
+		if(up_cust.ID != -1)
+		{
+			// found, therefore there is a customer row to update.
+			if (up_cust.num_trans < 0){
+				up_cust.num_trans = 0; // if somehow negative
+			}
+			up_cust.num_trans = up_cust.num_trans + 1;
+			string retJSON_updcustSRC = UDP_contr.createUDPPacket(4, up_cust, SRC_acc, 0, 0, 0);
+			if(retJSON_updcustSRC.compare(0,1,"1") == 0)
+			{
+				cout << "Source customer transaction quantity updated!" << endl;
+			} else {
+				cout << "Source customer transaction NOT quantity updated! Look for error code if one was returned" << endl;
+			}
+		} else {
+			// not found, TODO change owner of account to -5 to indicate now belongs to bank
+			SRC_acc.ownerID = -5;
+			// update the source account
+			string retJSON_upSRC = UDP_contr.createUDPPacket(8, up_cust, SRC_acc, 0, 0, 0);
+			if(retJSON_upSRC.compare(0,1,"1") == 0)
+			{
+				cout << "Account updated!" << endl;
+			} else {
+				cout << "ERR: account update failed." << endl;
+			}
+		}
 	} else {
 		cout << "ERR: account update failed." << endl;
 
@@ -1052,6 +1144,7 @@ void BankManagementSystem_Controller::transfer(int type, int custID)
 	cout << "DEST: " << DEST_acc.tot_amount << "+" << selectAmt << endl;
 	DEST_acc.tot_amount = DEST_acc.tot_amount + selectAmt;
 	cout << "DEST total: " << DEST_acc.tot_amount << endl;
+	// update destination account
 	string retJSON_upDEST = UDP_contr.createUDPPacket(8, up_cust, DEST_acc, 0, 0, 0);
 
 	if(retJSON_upDEST.compare(0,1,"1") == 0)
@@ -1063,9 +1156,35 @@ void BankManagementSystem_Controller::transfer(int type, int custID)
 		string retJSON_custDEST = UDP_contr.createUDPPacket(3, up_cust, DEST_acc, 0, 0, 0);
 		std::vector<BankManagementSystem_Model::st_customer> updCustDEST = model.getAllCustomers(retJSON_custDEST);
 		up_cust = updCustDEST[0];
-		up_cust.num_trans = up_cust.num_trans + 1;
+		// check if found
+		if(up_cust.ID != -1)
+		{
+			// found, therefore there is a customer row to update.
+			if (up_cust.num_trans < 0){
+				up_cust.num_trans = 0; // if somehow negative
+			}
+			up_cust.num_trans = up_cust.num_trans + 1;
+			string retJSON_updcustDT = UDP_contr.createUDPPacket(4, up_cust, DEST_acc, 0, 0, 0);
+			if(retJSON_updcustDT.compare(0,1,"1") == 0)
+			{
+				cout << "Destination customer transaction quantity updated!" << endl;
+			} else {
+				cout << "Destination customer transaction NOT quantity updated! Look for error code if one was returned" << endl;
+			}
 
-		string retJSON_updcustSRC = UDP_contr.createUDPPacket(4, up_cust, DEST_acc, 0, 0, 0);
+		} else {
+			// not found, TODO change owner of account to -5 to indicate now belongs to bank
+			DEST_acc.ownerID = -5;
+			// update destination account
+			string retJSON_upDEST = UDP_contr.createUDPPacket(8, up_cust, DEST_acc, 0, 0, 0);
+
+			if(retJSON_upDEST.compare(0,1,"1") == 0)
+			{
+				cout << "Account updated!" << endl;
+			} else {
+				cout << "ERR: account update failed." << endl;
+			}
+		}
 
 	} else {
 		cout << "ERR: account update failed." << endl;

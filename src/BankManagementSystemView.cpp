@@ -136,6 +136,7 @@ void BankManagementSystem_View::printUpdateCustomer(string name)
 	cout << "1. Modify name [currently: " << name << "]" << endl;
 	cout << "2. Modify PIN" << endl;
 	cout << "3. Save and Exit" << endl;
+	cout << "4. Discard changes and Exit" << endl;
 
 	cout << "> Enter your choice: ";
 }
@@ -237,6 +238,7 @@ void BankManagementSystem_View::printSelectedAccOptions(int owner){
 	cout << "1. Change owner ID [currently: " << owner << "]" << endl;
 	cout << "2. Change amount" << endl;
 	cout << "3. Save and Exit" << endl;
+	cout << "4. Discard changes and Exit" << endl;
 
 	cout << "> Enter your choice: ";
 }

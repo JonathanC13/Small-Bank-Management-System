@@ -1,5 +1,5 @@
 # test2
 
 todo:
-1. API double checks input parameter datatypes
-3. Formal test document
+1. Some manual regression testing
+2. Formal test document
