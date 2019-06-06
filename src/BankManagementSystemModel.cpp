@@ -163,10 +163,18 @@ BankManagementSystem_Model::st_account BankManagementSystem_Model::createAccount
 	time_t now = time(0);
 
 	// convert now to string form
-	char* dt = ctime(&now);
+    char* dtnow = ctime(&now);
+
+    // convert now to tm struct for UTC
+    tm *dt = localtime(&now);
+
+	int yyyy = 1970 + dt->tm_year;
+	int mm = 1 + dt->tm_mon;
+	int dd = dt->tm_mday;
+	string dateForm = to_string(yyyy) + "-" + to_string(mm) + "-" + to_string(dd);
 
 	BankManagementSystem_Model::st_account new_acc;
-	new_acc.dateCreated = dt;
+	new_acc.dateCreated = dateForm;
 	new_acc.tot_amount = accAmt;
 
 	return new_acc;
