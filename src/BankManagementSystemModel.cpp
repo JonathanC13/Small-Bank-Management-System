@@ -47,8 +47,40 @@ BankManagementSystem_Model::st_customer BankManagementSystem_Model::setNewCustom
 	time_t now = time(0);
 
 	// convert now to string form
-	char* dt = ctime(&now);
+	//char* dtnow = ctime(&now);
 	//cout << "Time: " << dt << endl;
+    // convert now to tm struct for UTC
+    tm *dt = localtime(&now);
+
+	int yyyy = 1900 + dt->tm_year;
+	string s_yyyy = to_string(yyyy);
+
+	int mm = 1 + dt->tm_mon;
+	string s_mm;
+	if(floor(mm / 10) == 0){
+		s_mm = '0' + to_string(mm);
+	} else {
+		s_mm = to_string(mm);
+		if(mm % 10 == 0){
+			s_mm = s_mm + '0';
+		}
+	}
+
+	int dd = dt->tm_mday;
+
+
+	string s_dd;
+	if(floor(dd / 10) == 0){
+		s_dd = '0' + to_string(dd);
+
+	} else {
+		s_dd = to_string(dd);
+		if(dd % 10 == 0){
+			s_dd = s_dd + '0';
+		}
+	}
+
+	string dateForm = s_yyyy + "-" + s_mm + "-" + s_dd;
 	//</Get the current time>
 
 	// create a customer struct
@@ -56,7 +88,7 @@ BankManagementSystem_Model::st_customer BankManagementSystem_Model::setNewCustom
 	newCust.Name = newCustNm;
 	newCust.PIN = newPIN;
 	newCust.ID = 0;
-	newCust.dateCreated = dt;
+	newCust.dateCreated = dateForm;
 	newCust.num_acc = 0;
 	newCust.num_trans = 0;
 
@@ -163,15 +195,38 @@ BankManagementSystem_Model::st_account BankManagementSystem_Model::createAccount
 	time_t now = time(0);
 
 	// convert now to string form
-    char* dtnow = ctime(&now);
+    //char* dtnow = ctime(&now);
 
     // convert now to tm struct for UTC
     tm *dt = localtime(&now);
 
-	int yyyy = 1970 + dt->tm_year;
+	int yyyy = 1900 + dt->tm_year;
+	string s_yyyy = to_string(yyyy);
+
 	int mm = 1 + dt->tm_mon;
+	string s_mm;
+	if(floor(mm / 10) == 0){
+		s_mm = '0' + to_string(mm);
+	} else {
+		s_mm = to_string(mm);
+		if(mm % 10 == 0){
+			s_mm = s_mm + '0';
+		}
+	}
+
 	int dd = dt->tm_mday;
-	string dateForm = to_string(yyyy) + "-" + to_string(mm) + "-" + to_string(dd);
+	string s_dd;
+	if(floor(dd / 10) == 0){
+		s_dd = '0' + to_string(dd);
+	} else {
+		s_dd = to_string(dd);
+		if(dd % 10 == 0){
+			s_dd = s_dd + '0';
+		}
+	}
+
+	string dateForm = s_yyyy + "-" + s_mm + "-" + s_dd;
+
 
 	BankManagementSystem_Model::st_account new_acc;
 	new_acc.dateCreated = dateForm;

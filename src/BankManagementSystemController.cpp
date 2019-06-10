@@ -29,7 +29,7 @@ BankManagementSystem_Model model;
 BankManagementSystemUDP_controller UDP_contr;
 
 BankManagementSystem_Controller::BankManagementSystem_Controller(BankManagementSystem_View BMS_view, BankManagementSystem_Model BMS_model) {
-
+	cout << "hello" << endl;
 	//check initial server status
 	serverStatus();
 
